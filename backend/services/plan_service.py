@@ -27,6 +27,19 @@ from agents.food import dining_agent
 from agents.budget import budget_agent
 
 
+
+# Import Groq agents
+from config.groq_agents import (
+    destination_agent_groq,
+    flight_agent_groq,
+    hotel_agent_groq,
+    dining_agent_groq,
+    budget_agent_groq,
+    itinerary_agent_groq,
+    generate_product_recommendations
+)
+
+
 def travel_request_to_markdown(data: TravelPlanRequest) -> str:
     # Map of travel vibes to their descriptions
     travel_vibes = {
@@ -125,7 +138,7 @@ def travel_request_to_markdown(data: TravelPlanRequest) -> str:
         ]
     )
 
-    return "\n".join(lines)
+    return "n".join(lines)
 
 
 async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
@@ -185,8 +198,8 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
             current_step="Researching about the destination",
         )
 
-        # Destination Research
-        destionation_research_response = await destination_agent.arun(
+         # Destination Research using Groq
+        destination_research_content = await destination_agent_groq.arun(
             f"""
             Please research about the destination {request.travel_plan.destination}
 
@@ -200,13 +213,13 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
         )
 
         logger.info(
-            f"Destination research response: {destionation_research_response.messages[-1].content}"
+              f"Destination research response: {destination_research_content[:500]}..."
         )
 
         last_response_content = f"""
         ## Destination Attractions:
         ---
-        {destionation_research_response.messages[-1].content}
+         {destination_research_content}
         ---
 """
 
@@ -216,8 +229,8 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
             status="processing",
             current_step="Searching for the best flights",
         )
-        # Flight Search
-        flight_search_response = await flight_search_agent.arun(
+               # Flight Search using Groq
+        flight_search_content = await flight_agent_groq.arun(
             f"""
             Please find flights according to the user's travel request:
             {travel_request_md}
@@ -231,13 +244,13 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
         )
 
         logger.info(
-            f"Flight search response: {flight_search_response.messages[-1].content}"
+            f"Flight search response: {flight_search_content[:500]}..."
         )
 
         last_response_content += f"""
         ## Flight recommendations:
         ---
-        {flight_search_response.messages[-1].content}
+        {flight_search_content}
         ---
         """
 
@@ -247,8 +260,8 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
             status="processing",
             current_step="Searching for the best hotels",
         )
-        # Hotel Search
-        hotel_search_response = await hotel_search_agent.arun(
+              # Hotel Search using Groq
+        hotel_search_content = await hotel_agent_groq.arun(
             f"""
             Please find hotels according to the user's travel request:
             {travel_request_md}
@@ -264,12 +277,12 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
         last_response_content += f"""
         ## Hotel recommendations:
         ---
-        {hotel_search_response.messages[-1].content}
+        {hotel_search_content}
         ---
         """
 
         logger.info(
-            f"Hotel search response: {hotel_search_response.messages[-1].content}"
+            f"Hotel search response: {hotel_search_content[:500]}..."
         )
 
         # Update status for AI team generation
@@ -278,8 +291,8 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
             status="processing",
             current_step="Searching for the best restaurants",
         )
-        # Restaurant Search
-        restaurant_search_response = await dining_agent.arun(
+        # Restaurant Search using Groq
+        restaurant_search_content = await dining_agent_groq.arun(
             f"""
             Please find restaurants according to the user's travel request:
             {travel_request_md}
@@ -295,12 +308,12 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
         last_response_content += f"""
         ## Restaurant recommendations:
         ---
-        {restaurant_search_response.messages[-1].content}
+        {restaurant_search_content}
         ---
         """
 
         logger.info(
-            f"Restaurant search response: {restaurant_search_response.messages[-1].content}"
+            f"Restaurant search response: {restaurant_search_content[:500]}..."
         )
 
         # Update status for AI team generation
@@ -309,8 +322,8 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
             status="processing",
             current_step="Creating the day-by-day itinerary",
         )
-        # Itinerary
-        itinerary_response = await itinerary_agent.arun(
+        # Itinerary using Groq
+        itinerary_content = await itinerary_agent_groq.arun(
             f"""
             Please create a detailed day-by-day itinerary for a trip to {request.travel_plan.destination}  for user's travel request:
             {travel_request_md}
@@ -320,12 +333,12 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
             """
         )
 
-        logger.info(f"Itinerary response: {itinerary_response.messages[-1].content}")
+        logger.info(f"Itinerary response: {itinerary_content[:500]}...")
 
         last_response_content += f"""
         ## Day-by-day itinerary:
         ---
-        {itinerary_response.messages[-1].content}
+        {itinerary_content}
         ---
         """
 
@@ -335,8 +348,8 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
             status="processing",
             current_step="Optimizing the budget",
         )
-        # Budget
-        budget_response = await budget_agent.arun(
+        # Budget using Groq
+        budget_content = await budget_agent_groq.arun(
             f"""
             Please optimize the budget according to the user's travel request:
             {travel_request_md}
@@ -346,7 +359,16 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
             """
         )
 
-        logger.info(f"Budget response: {budget_response.messages[-1].content}")
+        logger.info(f"Budget response: {budget_content[:500]}...")
+        
+        # Generate Product Recommendations using Groq
+        logger.info("Generating product recommendations...")
+        products = await generate_product_recommendations(
+            destination=request.travel_plan.destination,
+            travel_plan=travel_request_md[:500],
+            activities=destination_research_content[:500]
+        )
+        logger.info(f"Generated {len(products)} product recommendations")
 
         time_end = time.time()
         logger.info(f"Total time taken: {time_end - time_start:.2f} seconds")
@@ -369,16 +391,13 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
         final_response = json.dumps(
             {
                 "itinerary": json_response_output,
-                "budget_agent_response": budget_response.messages[-1].content,
-                "destination_agent_response": destionation_research_response.messages[
-                    -1
-                ].content,
-                "flight_agent_response": flight_search_response.messages[-1].content,
-                "hotel_agent_response": hotel_search_response.messages[-1].content,
-                "restaurant_agent_response": restaurant_search_response.messages[
-                    -1
-                ].content,
-                "itinerary_agent_response": itinerary_response.messages[-1].content,
+                "budget_agent_response": budget_content,
+                "destination_agent_response": destination_research_content,
+                "flight_agent_response": flight_search_content,
+                "hotel_agent_response": hotel_search_content,
+                "restaurant_agent_response": restaurant_search_content,
+                "itinerary_agent_response": itinerary_content,
+                "product_recommendations": products,
             },
             indent=2,
         )

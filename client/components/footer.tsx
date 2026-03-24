@@ -8,7 +8,7 @@ export default function Footer() {
           <p className="text-center text-muted-foreground text-sm">
             © 2024 TripCraft AI. All rights reserved.
           </p>
-          <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
+          {/* <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
             Made with <Heart className="w-4 h-4 text-red-500 fill-current" /> by{" "}
             <a
               href="https://x.com/mtwn105"
@@ -16,9 +16,9 @@ export default function Footer() {
               rel="noopener noreferrer"
               className="text-accent hover:underline font-medium"
             >
-              Amit Wani
+             You
             </a>
-          </div>
+          </div> */}
         </div>
       </div>
     </footer>

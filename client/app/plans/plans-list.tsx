@@ -296,7 +296,7 @@ export default function PlansList() {
               },
             }}
           >
-            {tripPlans.map((plan, index) => (
+            {tripPlans.map((plan) => (
               <motion.div
                 key={plan.id}
                 variants={{

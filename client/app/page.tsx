@@ -1,6 +1,6 @@
 "use client";
 
-import { Metadata } from "next";
+// import { Metadata } from "next";
 import {
   MapPin,
   Zap,
@@ -13,7 +13,7 @@ import {
   Compass,
   Palmtree,
 } from "lucide-react";
-import { TrackButton } from "@/components/track-button";
+// import { TrackButton } from "@/components/track-button";
 import {
   Card,
   CardContent,

@@ -46,7 +46,7 @@ class TravelPlanResponse(BaseModel):
 
 class DayByDayPlan(BaseModel):
     day: int = Field(
-        default=0, description="The day number in the itinerary, starting from 0"
+        default=0, description="The day number in the itinerary, starting from 1"
     )
     date: str = Field(
         default="", description="The date for this day in YYYY-MM-DD format"
@@ -60,11 +60,25 @@ class DayByDayPlan(BaseModel):
     evening: str = Field(
         default="", description="Description of evening activities and plans"
     )
+    image_url: str = Field(
+        default="", description="Image URL for this day's main activity or destination"
+    )
     notes: str = Field(
         default="",
         description="Additional tips, reminders or important information for the day",
     )
 
+
+
+class PlaceImage(BaseModel):
+    place: str = Field(description="Name of the place")
+    image_url: str = Field(description="Unsplash image URL for the place")
+
+
+class ProductSuggestion(BaseModel):
+    name: str = Field(description="Product name")
+    why_needed: str = Field(description="Reason why this product is useful for the trip")
+    link: str = Field(description="Amazon or shopping link for the product")
 
 class Attraction(BaseModel):
     name: str = Field(default="", description="Name of the attraction")
@@ -94,22 +108,33 @@ class RestaurantResult(BaseModel):
         default="", description="Website or booking URL for the restaurant"
     )
 
-
 class TravelPlanTeamResponse(BaseModel):
+    title: str = Field(description="Title of the travel plan")
+    destination: str = Field(description="Main destination of the trip")
+    duration: str = Field(description="Duration of the trip (e.g., '5 Days, 4 Nights')")
+    budget_estimate: str = Field(description="Estimated budget for the trip")
+    images: List[PlaceImage] = Field(description="Images of key places in the destination")
+    daily_plan: List[DayByDayPlan] = Field(
+        description="Day-by-day itinerary with morning, afternoon, evening activities"
+    )
+    product_suggestions: List[ProductSuggestion] = Field(
+        description="Recommended products for the trip (minimum 3)"
+    )
+    # Legacy fields for backward compatibility
     day_by_day_plan: List[DayByDayPlan] = Field(
-        description="A list of day-by-day plans for the trip"
+        default=[], description="(Legacy) A list of day-by-day plans for the trip"
     )
-    hotels: List[HotelResult] = Field(description="A list of hotels for the trip")
+    hotels: List[HotelResult] = Field(default=[], description="A list of hotels for the trip")
     attractions: List[Attraction] = Field(
-        description="A list of recommended attractions for the trip"
+        default=[], description="A list of recommended attractions for the trip"
     )
-    flights: List[FlightResult] = Field(description="A list of flights for the trip")
+    flights: List[FlightResult] = Field(default=[], description="A list of flights for the trip")
     restaurants: List[RestaurantResult] = Field(
-        description="A list of recommended restaurants for the trip"
+        default=[], description="A list of recommended restaurants for the trip"
     )
     budget_insights: List[str] = Field(
-        description="A list of budget insights for the trip"
+        default=[], description="A list of budget insights for the trip"
     )
     tips: List[str] = Field(
-        description="A list of tips or recommendations for the trip"
+        default=[], description="A list of tips or recommendations for the trip"
     )

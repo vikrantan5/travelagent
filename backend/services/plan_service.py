@@ -25,7 +25,9 @@ from agents.flight import flight_search_agent
 from agents.hotel import hotel_search_agent
 from agents.food import dining_agent
 from agents.budget import budget_agent
-
+from services.unsplash_service import unsplash_service
+from models.travel_plan import PlaceImage, ProductSuggestion
+from typing import List  # ADD THIS IMPORT
 
 
 # Import Groq agents
@@ -138,7 +140,96 @@ def travel_request_to_markdown(data: TravelPlanRequest) -> str:
         ]
     )
 
-    return "n".join(lines)
+    return "".join(lines)
+
+
+async def extract_and_fetch_images(
+    destination: str, 
+    destination_content: str,
+    itinerary_content: str,
+    num_images: int = 5
+) -> List[PlaceImage]:
+    """
+    Extract key places from destination research and itinerary, then fetch images from Unsplash.
+    
+    Args:
+        destination: Main destination name
+        destination_content: Destination research content
+        itinerary_content: Itinerary content
+        num_images: Number of place images to fetch
+    
+    Returns:
+        List of PlaceImage objects
+    """
+    place_images = []
+    
+    try:
+        # Use a simple extraction approach - look for numbered attractions or bullet points
+        # This is a basic implementation - you might want to use an LLM to extract places properly
+        import re
+        
+        # Extract places from destination content (looking for numbered or bulleted items)
+        places = []
+        
+        # FIXED: Correct regex patterns
+        patterns = [
+            r'\d+\.\s*\*\*([^*]+)\*\*',  # 1. **Place Name**
+            r'\d+\.\s*([^:]+)[:：]',      # 1. Place Name:
+            r'-\s*\*\*([^*]+)\*\*',       # - **Place Name**
+            r'##\s+([^#]+)',              # ## Place Name
+        ]
+        
+        for pattern in patterns:
+            matches = re.findall(pattern, destination_content + " " + itinerary_content)
+            places.extend([m.strip() for m in matches if m.strip()])
+        
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_places = []
+        for place in places:
+            place_clean = place.strip()
+            if place_clean and place_clean not in seen and len(place_clean) < 100:
+                seen.add(place_clean)
+                unique_places.append(place_clean)
+        
+        # Take first num_images places
+        selected_places = unique_places[:num_images]
+        
+        logger.info(f"Extracted {len(selected_places)} places: {selected_places}")
+        
+        # Fetch images for each place
+        for place in selected_places:
+            image_url = unsplash_service.get_image_for_place(place, destination)
+            if image_url:
+                place_images.append(PlaceImage(place=place, image_url=image_url))
+                logger.info(f"Fetched image for {place}: {image_url}")
+        
+        # If we didn't get enough place-specific images, get general destination images
+        if len(place_images) < 3:
+            logger.info(f"Not enough place images, fetching general destination images")
+            general_images = unsplash_service.get_destination_images(destination, count=3)
+            for idx, img_url in enumerate(general_images):
+                if len(place_images) >= num_images:
+                    break
+                place_images.append(PlaceImage(
+                    place=f"{destination} - View {idx + 1}",
+                    image_url=img_url
+                ))
+        
+    except Exception as e:
+        logger.error(f"Error extracting and fetching images: {str(e)}")
+        # Fallback: fetch general destination images
+        try:
+            general_images = unsplash_service.get_destination_images(destination, count=num_images)
+            for idx, img_url in enumerate(general_images):
+                place_images.append(PlaceImage(
+                    place=f"{destination} - View {idx + 1}",
+                    image_url=img_url
+                ))
+        except Exception as fallback_error:
+            logger.error(f"Fallback image fetch also failed: {str(fallback_error)}")
+    
+    return place_images
 
 
 async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
@@ -360,6 +451,22 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
         )
 
         logger.info(f"Budget response: {budget_content[:500]}...")
+         
+        # Update status for image fetching
+        await update_trip_plan_status(
+            trip_plan_id=trip_plan_id,
+            status="processing",
+            current_step="Fetching images from Unsplash",
+        )
+        
+        # Fetch images for key places
+        place_images = await extract_and_fetch_images(
+            destination=request.travel_plan.destination,
+            destination_content=destination_research_content,
+            itinerary_content=itinerary_content,
+            num_images=5
+        )
+        logger.info(f"Fetched {len(place_images)} place images")
         
         # Generate Product Recommendations using Groq
         logger.info("Generating product recommendations...")
@@ -384,6 +491,57 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
             last_response_content, TravelPlanTeamResponse
         )
         logger.info(f"Converted Structured Response: {json_response_output[:500]}...")
+
+         # Parse the JSON response to add our custom fields
+        try:
+            response_dict = json.loads(json_response_output)
+            
+            # Add new format fields
+            response_dict["title"] = f"{request.travel_plan.duration} Days in {request.travel_plan.destination}"
+            response_dict["destination"] = request.travel_plan.destination
+            response_dict["duration"] = f"{request.travel_plan.duration} Days"
+            response_dict["budget_estimate"] = f"{request.travel_plan.budget} {request.travel_plan.budget_currency}"
+            
+            # Add place images
+            response_dict["images"] = [img.model_dump() for img in place_images]
+            
+            # Rename day_by_day_plan to daily_plan for new format
+            if "day_by_day_plan" in response_dict:
+                response_dict["daily_plan"] = response_dict["day_by_day_plan"]
+                
+                # Fetch an image for each day if not already present
+                for idx, day in enumerate(response_dict["daily_plan"]):
+                    if not day.get("image_url"):
+                        # Use existing place images or fetch new one
+                        if idx < len(place_images):
+                            day["image_url"] = place_images[idx].image_url
+                        else:
+                            # Fetch a generic destination image
+                            img_url = unsplash_service.get_image_for_place(
+                                f"Day {day.get('day', idx+1)} {request.travel_plan.destination}",
+                                request.travel_plan.destination
+                            )
+                            day["image_url"] = img_url if img_url else ""
+            
+            # Add product suggestions (convert from products format)
+            if products:
+                response_dict["product_suggestions"] = [
+                    {
+                        "name": p.get("name", ""),
+                        "why_needed": p.get("reason", p.get("why_needed", "")),
+                        "link": p.get("amazon_url", p.get("link", ""))
+                    }
+                    for p in products
+                ]
+            else:
+                response_dict["product_suggestions"] = []
+            
+            # Convert back to JSON
+            json_response_output = json.dumps(response_dict, indent=2)
+            
+        except Exception as parse_error:
+            logger.error(f"Error parsing response for custom fields: {str(parse_error)}")
+            # Continue with original response
 
         # Delete any existing output entries for this trip plan
         await delete_trip_plan_outputs(trip_plan_id=trip_plan_id)

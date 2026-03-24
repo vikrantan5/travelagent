@@ -1,6 +1,7 @@
 generator client {
-  provider = "prisma-client-js"
-  output   = "../lib/generated/prisma"
+  provider        = "prisma-client-js"
+  output          = "../lib/generated/prisma"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
@@ -80,15 +81,14 @@ model Jwks {
 model TripPlanStatus {
   id          String    @id @default(cuid())
   tripPlanId  String    @unique
-  status      String    @default("pending") // pending, processing, completed, failed
+  status      String    @default("pending")
   currentStep String?
   error       String?
   startedAt   DateTime?
   completedAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-
-  tripPlan TripPlan @relation(fields: [tripPlanId], references: [id], onDelete: Cascade)
+  tripPlan    TripPlan  @relation(fields: [tripPlanId], references: [id], onDelete: Cascade)
 
   @@map("trip_plan_status")
 }
@@ -96,11 +96,11 @@ model TripPlanStatus {
 model TripPlanOutput {
   id         String   @id @default(cuid())
   tripPlanId String   @unique
-  tripPlan   TripPlan @relation(fields: [tripPlanId], references: [id], onDelete: Cascade)
   itinerary  String
   summary    String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  tripPlan   TripPlan @relation(fields: [tripPlanId], references: [id], onDelete: Cascade)
 
   @@map("trip_plan_output")
 }
@@ -134,8 +134,8 @@ model TripPlan {
   updatedAt        DateTime        @updatedAt
   userId           String?
   user             User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  status           TripPlanStatus?
   output           TripPlanOutput?
+  status           TripPlanStatus?
 
   @@map("trip_plan")
 }
@@ -153,6 +153,23 @@ model plan_tasks {
 
   @@index([status], map: "idx_plan_tasks_status")
   @@index([trip_plan_id], map: "idx_plan_tasks_trip_plan_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model trip_history {
+  id              String   @id @db.VarChar(255)
+  destination     String   @db.VarChar(500)
+  start_date      String?  @db.VarChar(100)
+  end_date        String?  @db.VarChar(100)
+  duration        Int
+  budget          Decimal? @db.Decimal(10, 2)
+  budget_currency String?  @default("USD") @db.VarChar(10)
+  travelers       Int?     @default(1)
+  trip_plan_id    String   @db.VarChar(255)
+  created_at      DateTime @default(now()) @db.Timestamp(6)
+
+  @@index([created_at], map: "idx_created_at")
+  @@index([trip_plan_id], map: "idx_trip_plan_id")
 }
 
 enum plan_task_status {

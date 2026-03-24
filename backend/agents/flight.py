@@ -61,8 +61,7 @@ flight_search_agent = Agent(
     """,
     markdown=True,
    
-    debug_mode=True,
+   
     retries=3,
-    delay_between_retries=2,
-    exponential_backoff=True,
+   
 )

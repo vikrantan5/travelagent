@@ -32,7 +32,7 @@ trip_planning_team = Team(
         flight_search_agent,
         itinerary_agent,
     ],
-    show_tool_calls=True,
+    
     markdown=True,
     description=(
         "You are the lead orchestrator of the TripCraft AI planning team. "
@@ -324,11 +324,6 @@ Format the entire itinerary with:
         "✅ Personalized tips based on user profile",
         "✅ Verified, real-world locations only",
     ],
-    enable_agentic_context=True,
-    share_member_interactions=True,
-    show_members_responses=True,
-   add_datetime_to_context=True,
-    add_member_tools_to_system_message=True,
-    # debug_mode=True,
-    telemetry=False,
+
+
 )

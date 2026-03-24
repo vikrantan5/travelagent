@@ -14,6 +14,22 @@ FALLBACK_MODEL = "mixtral-8x7b-32768"
 DEFAULT_TEMPERATURE = 0.3
 LOW_TEMPERATURE = 0.1
 
+
+
+
+# Model instances for agno compatibility
+from agno.models.groq import Groq as GroqModel
+
+model = GroqModel(
+    id=PRIMARY_MODEL,
+    api_key=os.getenv("GROQ_API_KEY")
+)
+
+model2 = GroqModel(
+    id=FALLBACK_MODEL,
+    api_key=os.getenv("GROQ_API_KEY")
+)
+
 def get_groq_completion(
     messages,
     model=PRIMARY_MODEL,

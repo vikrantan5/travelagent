@@ -53,6 +53,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${dmSans.variable} antialiased`}>
+         <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
         <Header />
         {children}
         <Footer />

@@ -12,6 +12,7 @@ import {
   Globe2,
   Compass,
   Palmtree,
+    ArrowLeftRight,
 } from "lucide-react";
 // import { TrackButton } from "@/components/track-button";
 import {
@@ -160,6 +161,16 @@ export default function Home() {
               >
                 <Plane className="w-5 h-5" />
                 Plan My Trip
+              </motion.button>
+            </Link>
+              <Link href="/compare">
+              <motion.button
+                className="glass-card text-white px-8 py-4 rounded-xl text-lg font-semibold flex items-center gap-2 w-full sm:w-auto border border-purple-500/30"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <ArrowLeftRight className="w-5 h-5" />
+                Compare Destinations
               </motion.button>
             </Link>
             <Link href="/plans">

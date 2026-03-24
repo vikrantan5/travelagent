@@ -71,7 +71,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-
+import { PaymentModal } from "@/components/payment-modal";
 const travelVibes = [
   { id: "relaxing", label: "Relaxing", icon: Waves },
   { id: "adventure", label: "Adventure", icon: Mountain },
@@ -224,6 +224,7 @@ export default function PlanForm() {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
+   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const router = useRouter();
 
   // Better Auth session hook
@@ -281,7 +282,6 @@ export default function PlanForm() {
 
   const onSubmit = async (data: TripFormData) => {
     if (isSubmitting) {
-
       return;
     }
 
@@ -297,6 +297,29 @@ export default function PlanForm() {
     });
 
     try {
+      // Check payment status first
+      if (session?.user?.id) {
+        try {
+          const paymentCheck = await fetch("/api/payment/check", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: session.user.id }),
+          });
+          
+          const paymentStatus = await paymentCheck.json();
+          
+          if (paymentStatus.requires_payment) {
+            setIsSubmitting(false);
+            setShowPaymentModal(true);
+            setSubmitMessage("⚠️ " + paymentStatus.message);
+            return;
+          }
+        } catch (paymentError) {
+          console.error("Payment check error:", paymentError);
+          // Continue anyway if payment check fails
+        }
+      }
+
       // Include user ID from session if available
       const submitData = {
         ...data,
@@ -314,6 +337,19 @@ export default function PlanForm() {
       const result = await response.json();
 
       if (result.success) {
+        // Record planner creation
+        if (session?.user?.id) {
+          try {
+             await fetch("/api/payment/record-planner", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ user_id: session.user.id }),
+            });
+          } catch (recordError) {
+            console.error("Failed to record planner:", recordError);
+          }
+        }
+        
         umami.track("Plan Submission Success", { tripPlanId: result.tripPlanId });
         setSubmitMessage("🎉 Your trip plan has been submitted successfully!");
         console.log("Trip submitted with ID:", result.tripPlanId);
@@ -1565,6 +1601,14 @@ export default function PlanForm() {
           </form>
         </Form>
       </div>
+        {/* Payment Modal */}
+      {showPaymentModal && session?.user?.id && (
+        <PaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          userId={session.user.id}
+        />
+      )}
     </div>
   );
 }

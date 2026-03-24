@@ -32,11 +32,25 @@ _engine: Optional[AsyncEngine] = None
 _session_factory: Optional[async_sessionmaker[AsyncSession]] = None
 
 
+_db_pool: Optional[asyncpg.Pool] = None
+
+
+# -----------------------------
+# DB POOL (asyncpg) for direct queries
+# -----------------------------
+def get_db_pool() -> asyncpg.Pool:
+    """Get the asyncpg connection pool for direct queries"""
+    global _db_pool
+    if _db_pool is None:
+        raise RuntimeError("Database pool not initialized. Call initialize_db_pool() first.")
+    return _db_pool
+
+
 # -----------------------------
 # DB INITIALIZATION
 # -----------------------------
 async def initialize_db_pool(pool_size: int = 10, max_overflow: int = 20) -> None:
-    global _engine, _session_factory
+    global _engine, _session_factory, _db_pool
 
     if _engine is not None:
         return
@@ -50,12 +64,21 @@ async def initialize_db_pool(pool_size: int = 10, max_overflow: int = 20) -> Non
         ssl_context.verify_mode = ssl.CERT_NONE
 
         # -------------------------------------------------------
-        # REAL FIX: test connection *using raw asyncpg* (no prepare)
+        # Create asyncpg pool for direct queries
         # -------------------------------------------------------
-        logger.info("Testing connection with asyncpg (no prepared statements)")
-        conn = await asyncpg.connect(RAW_URL, ssl=ssl_context)
-        await conn.execute("SELECT 1")  # asyncpg does NOT prepare this
-        await conn.close()
+        logger.info("Creating asyncpg connection pool")
+        _db_pool = await asyncpg.create_pool(
+            RAW_URL,
+            min_size=5,
+            max_size=pool_size,
+            ssl=ssl_context,
+            command_timeout=60
+        )
+        
+        # Test connection
+        async with _db_pool.acquire() as conn:
+            await conn.execute("SELECT 1")
+        logger.info("Asyncpg pool created successfully")
 
         # -------------------------------------------------------
         # Now create SQLAlchemy engine safely
@@ -85,12 +108,16 @@ async def initialize_db_pool(pool_size: int = 10, max_overflow: int = 20) -> Non
         logger.error(f"❌ Failed to initialize DB pool: {e}")
         raise
 
-
 # -----------------------------
 # CLOSE DB
 # -----------------------------
 async def close_db_pool() -> None:
-    global _engine
+    global _engine, _db_pool
+    
+    if _db_pool is not None:
+        logger.info("Closing asyncpg pool")
+        await _db_pool.close()
+        _db_pool = None
     if _engine is not None:
         logger.info("Closing SQLAlchemy engine")
         await _engine.dispose()

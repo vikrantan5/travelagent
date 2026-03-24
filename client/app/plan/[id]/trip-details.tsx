@@ -47,8 +47,24 @@ import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 import { useSwipeable } from "react-swipeable";
 import { motion, AnimatePresence } from "framer-motion";
-
+import { ProductSuggestions } from "@/components/product-suggestions";
+import { ImageGallery } from "@/components/image-gallery";
 // Type Definitions
+interface PlaceImage {
+  place: string;
+  image_url: string;
+}
+
+interface Product {
+  name: string;
+  category?: string;
+  reason?: string;
+  why_needed?: string;
+  price_range?: string;
+  priority?: string;
+  amazon_url?: string;
+  link?: string;
+}
 interface DayPlan {
   day: number;
   date: string;
@@ -113,6 +129,10 @@ interface TripDetails {
   restaurant_agent_response?: string;
   itinerary_agent_response?: string;
   current_step?: string;
+   // New fields
+  images?: PlaceImage[];
+  product_recommendations?: Product[];
+  products?: Product[];
   // Input details
   destination?: string;
   startingLocation?: string;
@@ -343,6 +363,8 @@ export default function TripDetails() {
         let flight_agent_response = "";
         let restaurant_agent_response = "";
         let itinerary_agent_response = "";
+         let place_images: PlaceImage[] = [];
+        let products: Product[] = [];
 
         if (tripPlan.output?.itinerary) {
           try {
@@ -359,6 +381,10 @@ export default function TripDetails() {
               parsedOutput.restaurant_agent_response || "";
             itinerary_agent_response =
               parsedOutput.itinerary_agent_response || "";
+
+             // Extract images and products
+            place_images = parsedOutput.images || [];
+            products = parsedOutput.product_recommendations || parsedOutput.products || [];
 
             if (parsedOutput.itinerary) {
               // Then parse the inner JSON string to get the actual itinerary
@@ -386,6 +412,11 @@ export default function TripDetails() {
           flight_agent_response,
           restaurant_agent_response,
           itinerary_agent_response,
+
+            // New fields
+          images: place_images,
+          product_recommendations: products,
+          products: products,
           // Input details
           destination: tripPlan.destination,
           startingLocation: tripPlan.startingLocation,
@@ -932,6 +963,9 @@ export default function TripDetails() {
             <TabsTrigger value="budget" className="flex items-center">
               <Receipt className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Budget</span>
+            </TabsTrigger>
+             <TabsTrigger value="products" className="flex items-center">
+              <span className="hidden sm:inline">Products</span>
             </TabsTrigger>
           </TabsList>
 
@@ -1505,6 +1539,33 @@ export default function TripDetails() {
                 </h2>
                 <p className="text-muted-foreground">
                   Budget analysis information is not available for this trip.
+                </p>
+              </div>
+            )}
+          </TabsContent>
+
+                {/* Products Tab Content */}
+          <TabsContent value="products" className="space-y-8">
+            {(trip.product_recommendations && trip.product_recommendations.length > 0) || 
+             (trip.products && trip.products.length > 0) ? (
+              <>
+                <ProductSuggestions products={trip.product_recommendations || trip.products || []} />
+                
+                {trip.images && trip.images.length > 0 && (
+                  <ImageGallery images={trip.images} destination={trip.destination || ""} />
+                )}
+              </>
+            ) : (
+              <div className="text-center py-10 border rounded-lg">
+                <Info
+                  size={48}
+                  className="text-muted-foreground mx-auto mb-4"
+                />
+                <h2 className="text-xl font-semibold mb-2">
+                  Product Recommendations Not Available
+                </h2>
+                <p className="text-muted-foreground">
+                  Product recommendations are not available for this trip.
                 </p>
               </div>
             )}

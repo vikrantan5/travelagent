@@ -327,7 +327,7 @@ Format the entire itinerary with:
     enable_agentic_context=True,
     share_member_interactions=True,
     show_members_responses=True,
-    add_datetime_to_instructions=True,
+   add_datetime_to_context=True,
     add_member_tools_to_system_message=True,
     # debug_mode=True,
     telemetry=False,

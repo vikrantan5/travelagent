@@ -11,7 +11,7 @@ from pathlib import Path
 from loguru import logger
 from dotenv import load_dotenv
 
-# Load environment variables
+# Load environment variables    
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -63,12 +63,10 @@ async def setup_database():
         
         await conn.close()
         
-        logger.info(f"
-{'='*50}")
+        logger.info(f"{'='*50}")
         logger.info(f"Database setup completed!")
         logger.info(f"Successful migrations: {success_count}/{len(migration_files)}")
-        logger.info(f"{'='*50}
-")
+        logger.info(f"{'='*50}")
         
         return success_count == len(migration_files)
         

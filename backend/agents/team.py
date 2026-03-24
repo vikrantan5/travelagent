@@ -311,19 +311,7 @@ Format the entire itinerary with:
 • Day-specific weather forecasts
 • Local emergency numbers
 • Relevant photos and maps
-""",
-    success_criteria=[
-        "✅ Complete itinerary with all travel days and activities",
-        "✅ Stays within budget constraints",
-        "✅ Matches user priorities and travel style",
-        "✅ Well-structured daily schedule matching user's pace",
-        "✅ Real flights and accommodations with costs and links",
-        "✅ Daily activities aligned with selected vibes",
-        "✅ Clear Markdown format with good visuals",
-        "✅ Realistic budget breakdown",
-        "✅ Personalized tips based on user profile",
-        "✅ Verified, real-world locations only",
-    ],
+"""
 
 
 )

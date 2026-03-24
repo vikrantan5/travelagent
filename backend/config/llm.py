@@ -4,8 +4,8 @@ import os
 # Initialize Groq client
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-# Primary model configuration (Llama 3 70B)
-PRIMARY_MODEL = "llama3-70b-8192"
+# Primary model configuration (Llama 3.3 70B)
+PRIMARY_MODEL = "llama-3.3-70b-versatile"
 
 # Fallback model configuration (Mixtral)
 FALLBACK_MODEL = "mixtral-8x7b-32768"

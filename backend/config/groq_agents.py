@@ -17,7 +17,7 @@ class GroqAgent:
         name: str,
         role: str,
         instructions: List[str],
-        model: str = "llama3-70b-8192",
+      model: str = "llama-3.3-70b-versatile",
         temperature: float = 0.3,
         max_tokens: int = 8096
     ):
@@ -65,7 +65,7 @@ class GroqAgent:
         except Exception as e:
             logger.error(f"[{self.name}] Error: {str(e)}")
             # Try fallback model
-            if self.model == "llama3-70b-8192":
+            if self.model == "llama-3.3-70b-versatile":
                 logger.info(f"[{self.name}] Trying fallback model: mixtral-8x7b-32768")
                 self.model = "mixtral-8x7b-32768"
                 return await self.arun(user_message, context)
@@ -242,6 +242,17 @@ async def generate_product_recommendations(
         if start_idx != -1 and end_idx > start_idx:
             json_str = response[start_idx:end_idx]
             products = json.loads(json_str)
+
+
+            
+            # Add Amazon URLs to each product
+            for product in products:
+                search_term = product.get('search_term', product.get('name', ''))
+                # Create Amazon search URL
+                search_query = search_term.replace(' ', '+')
+                product['amazon_url'] = f"https://www.amazon.com/s?k={search_query}"
+            
+            logger.info(f"Successfully generated {len(products)} product recommendations with Amazon links")
             return products
     except Exception as e:
         logger.error(f"Error parsing product recommendations: {e}")

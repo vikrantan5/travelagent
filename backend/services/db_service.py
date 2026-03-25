@@ -72,7 +72,12 @@ async def initialize_db_pool(pool_size: int = 10, max_overflow: int = 20) -> Non
             min_size=5,
             max_size=pool_size,
             ssl=ssl_context,
-            command_timeout=60
+            command_timeout=60,
+            # Disable prepared statements for PgBouncer compatibility
+            statement_cache_size=0,
+            server_settings={
+                'jit': 'off'
+            }
         )
         
         # Test connection

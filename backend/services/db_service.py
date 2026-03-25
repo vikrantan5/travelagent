@@ -30,13 +30,11 @@ logger.info(f"Using DATABASE_URL: {DATABASE_URL}")
 
 _engine: Optional[AsyncEngine] = None
 _session_factory: Optional[async_sessionmaker[AsyncSession]] = None
-
-
 _db_pool: Optional[asyncpg.Pool] = None
 
 
 # -----------------------------
-# DB POOL (asyncpg) for direct queries
+# DB POOL (asyncpg)
 # -----------------------------
 def get_db_pool() -> asyncpg.Pool:
     """Get the asyncpg connection pool for direct queries"""
@@ -64,7 +62,7 @@ async def initialize_db_pool(pool_size: int = 5, max_overflow: int = 10) -> None
         ssl_context.verify_mode = ssl.CERT_NONE
 
         # -------------------------------------------------------
-        # Create asyncpg pool for direct queries
+        # asyncpg pool
         # -------------------------------------------------------
         logger.info("Creating asyncpg connection pool")
         _db_pool = await asyncpg.create_pool(
@@ -73,20 +71,19 @@ async def initialize_db_pool(pool_size: int = 5, max_overflow: int = 10) -> None
             max_size=pool_size,
             ssl=ssl_context,
             command_timeout=60,
-            # Disable prepared statements for PgBouncer compatibility
             statement_cache_size=0,
             server_settings={
                 'jit': 'off'
             }
         )
-        
+
         # Test connection
         async with _db_pool.acquire() as conn:
             await conn.execute("SELECT 1")
         logger.info("Asyncpg pool created successfully")
 
         # -------------------------------------------------------
-        # Now create SQLAlchemy engine safely
+        # SQLAlchemy engine
         # -------------------------------------------------------
         _engine = create_async_engine(
             DATABASE_URL,
@@ -94,13 +91,18 @@ async def initialize_db_pool(pool_size: int = 5, max_overflow: int = 10) -> None
             future=True,
             pool_size=pool_size,
             max_overflow=max_overflow,
-            pool_pre_ping=True,  # Verify connections before using
-            pool_recycle=3600,    # Recycle connections after 1 hour
+            pool_pre_ping=True,
+            pool_recycle=3600,
             connect_args={
                 "statement_cache_size": 0,
                 "prepared_statement_cache_size": 0,
+                "prepared_statement_name_func": None,
                 "ssl": ssl_context,
-                "timeout": 30
+                "timeout": 30,
+                "server_settings": {
+                    "jit": "off",
+                    "application_name": "tripcraft_app"
+                }
             }
         )
 
@@ -117,16 +119,18 @@ async def initialize_db_pool(pool_size: int = 5, max_overflow: int = 10) -> None
         logger.error(f"❌ Failed to initialize DB pool: {e}")
         raise
 
+
 # -----------------------------
 # CLOSE DB
 # -----------------------------
 async def close_db_pool() -> None:
     global _engine, _db_pool
-    
+
     if _db_pool is not None:
         logger.info("Closing asyncpg pool")
         await _db_pool.close()
         _db_pool = None
+
     if _engine is not None:
         logger.info("Closing SQLAlchemy engine")
         await _engine.dispose()
@@ -144,7 +148,6 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
     session: AsyncSession = _session_factory()
     try:
         yield session
-      
     except Exception as e:
         await session.rollback()
         logger.error(f"❌ Session error: {e}")

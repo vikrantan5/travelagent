@@ -49,7 +49,9 @@ async def update_task_status(
                 if output_data is not None:
                     task.output_data = output_data
                 if error_message is not None:
-                    task.error_message = error_message
+                     # Truncate error message to prevent database column overflow
+                    # Max length is 2000, but leave some buffer
+                    task.error_message = error_message[:1900] if len(error_message) > 1900 else error_message
                 task.updated_at = datetime.now(timezone.utc)
                 await session.flush()
                 await session.commit()

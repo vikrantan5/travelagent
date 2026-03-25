@@ -78,14 +78,17 @@ destination_agent_groq = GroqAgent(
     role="destination research specialist",
     instructions=[
         "Research destinations with focus on user preferences",
-        "Provide 8-10 attractions with brief descriptions",
+        "Provide 8-10 TOP attractions with specific, searchable names",
+        "CRITICAL: Use full, official place names (e.g., 'Eiffel Tower Paris', 'Tower Bridge London', 'Taj Mahal Agra')",
+        "Format each attraction as: **[Full Place Name]** - Description",
         "Include practical info: hours, fees, visit duration",
+        "Avoid generic names like 'Old Town', 'City Center', 'Local Market'",
+        "Use proper nouns and specific landmark names",
         "Consider seasonality and current events",
-        "Format in clear Markdown with emojis"
+        "Format in clear Markdown with emojis for visual appeal"
     ],
     temperature=0.3
 )
-
 # Flight Search Agent
 flight_agent_groq = GroqAgent(
     name="Flight Search Assistant",
@@ -149,11 +152,13 @@ itinerary_agent_groq = GroqAgent(
         "- Each day must have: Day number, Morning activities, Afternoon activities, Evening activities",
         "- Use format: '## Day X' for each day header",
         "- Under each day, use '**Morning:**', '**Afternoon:**', '**Evening:**' sections",
+        "- CRITICAL: Use specific, full place names (e.g., 'Tower Bridge' not 'a bridge', 'Louvre Museum' not 'museum')",
         "- Include specific timing (e.g., 9:00 AM, 2:00 PM)",
         "- Balance activities with rest periods",
         "- Consider travel time between locations",
         "- Add practical tips at the end of each day",
-        "- Keep descriptions concise (2-3 sentences per time slot)"
+        "- Keep descriptions concise (2-3 sentences per time slot)",
+        "- Ensure place names match those from destination research"
     ],
     temperature=0.3,
     max_tokens=2000

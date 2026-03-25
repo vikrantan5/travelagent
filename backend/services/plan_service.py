@@ -72,10 +72,6 @@ def travel_request_to_markdown(data: TravelPlanRequest) -> str:
         5: "6+ activities per day with back-to-back scheduling",
     }
 
-
-
-
-    
     def format_date(date_str: str, is_picker: bool) -> str:
         if not date_str:
             return "Not specified"
@@ -151,7 +147,7 @@ async def extract_and_fetch_images(
     destination: str, 
     destination_content: str,
     itinerary_content: str,
-    num_images: int = 5
+    num_images: int = 8
 ) -> List[PlaceImage]:
     """
     Extract key places from destination research and itinerary, then fetch images from Unsplash.
@@ -163,78 +159,103 @@ async def extract_and_fetch_images(
         num_images: Number of place images to fetch
     
     Returns:
-        List of PlaceImage objects
+        List of PlaceImage objects with real Unsplash image URLs
     """
     place_images = []
     
     try:
-        # Use a simple extraction approach - look for numbered attractions or bullet points
-        # This is a basic implementation - you might want to use an LLM to extract places properly
         import re
         
-        # Extract places from destination content (looking for numbered or bulleted items)
+        # Extract places from destination content using multiple patterns
         places = []
         
-        # FIXED: Correct regex patterns
+        # Enhanced regex patterns to catch more place names
         patterns = [
-            r'\d+\.\s*\*\*([^*]+)\*\*',  # 1. **Place Name**
-            r'\d+\.\s*([^:]+)[:：]',      # 1. Place Name:
-            r'-\s*\*\*([^*]+)\*\*',       # - **Place Name**
-            r'##\s+([^#]+)',              # ## Place Name
+            r'\d+\.\s*\*\*([^*]+)\*\*',        # 1. **Place Name**
+            r'\*\*([^*]+)\*\*\s*[-–—:]',         # **Place Name** -
+            r'###?\s*([^#]+)',                  # ## Place Name or ### Place Name
+            r'\d+\.\s*([^:]+)(?=:)',           # 1. Place Name:
+            r'-\s*\*\*([^*]+)\*\*',            # - **Place Name**
+            r'🏛️|🏰|🏝️|🏔️|🌊|🎭|🏖️|⛰️\s*\*\*([^*]+)\*\*',  # Emoji markers
+            r'Visit\s+([A-Z][^,.!?]+?)(?=\s+[-–]|\.|,|)',  # Visit Place Name
         ]
         
-        for pattern in patterns:
-            matches = re.findall(pattern, destination_content + " " + itinerary_content)
-            places.extend([m.strip() for m in matches if m.strip()])
+        combined_content = destination_content + " " + itinerary_content
         
-        # Remove duplicates while preserving order
+        for pattern in patterns:
+            matches = re.findall(pattern, combined_content, re.IGNORECASE)
+            places.extend([m.strip() for m in matches if isinstance(m, str) and m.strip()])
+        
+        # Clean and filter places
         seen = set()
         unique_places = []
         for place in places:
             place_clean = place.strip()
-            if place_clean and place_clean not in seen and len(place_clean) < 100:
+            # Filter out noise
+            if (place_clean 
+                and place_clean not in seen 
+                and len(place_clean) > 3 
+                and len(place_clean) < 80
+                and not place_clean.lower().startswith(('day ', 'morning', 'afternoon', 'evening'))
+                and not any(x in place_clean.lower() for x in ['http', 'www', 'image_url'])):
                 seen.add(place_clean)
                 unique_places.append(place_clean)
         
-        # Take first num_images places
-        selected_places = unique_places[:num_images]
+        logger.info(f"Extracted {len(unique_places)} unique places from content")
         
-        logger.info(f"Extracted {len(selected_places)} places: {selected_places}")
+        # Select best places for images (prioritize unique landmarks)
+        selected_places = unique_places[:num_images + 5]  # Get extra in case some fail
         
-        # Fetch images for each place
+        # Fetch images for each place with better error handling
+        successful_fetches = 0
         for place in selected_places:
+            if successful_fetches >= num_images:
+                break
+                
+            # Create search query with destination context
+            search_query = f"{place}, {destination}"
+            logger.info(f"Fetching image for: {search_query}")
+            
             image_url = unsplash_service.get_image_for_place(place, destination)
+            
             if image_url:
                 place_images.append(PlaceImage(place=place, image_url=image_url))
-                logger.info(f"Fetched image for {place}: {image_url}")
+                successful_fetches += 1
+                logger.info(f"✅ Fetched image for {place}: {image_url[:80]}...")
+            else:
+                logger.warning(f"⚠️ No image found for {place}")
         
-        # If we didn't get enough place-specific images, get general destination images
-        if len(place_images) < 3:
-            logger.info(f"Not enough place images, fetching general destination images")
-            general_images = unsplash_service.get_destination_images(destination, count=3)
-            for idx, img_url in enumerate(general_images):
-                if len(place_images) >= num_images:
-                    break
+        # If we didn't get enough place-specific images, fetch general destination images
+        if len(place_images) < num_images:
+            needed = num_images - len(place_images)
+            logger.info(f"Fetching {needed} additional general destination images")
+            general_images = unsplash_service.get_destination_images(destination, count=needed + 2)
+            
+            for idx, img_url in enumerate(general_images[:needed]):
                 place_images.append(PlaceImage(
-                    place=f"{destination} - View {idx + 1}",
+                    place=f"{destination} Scenic View {idx + 1}",
                     image_url=img_url
                 ))
+                logger.info(f"✅ Added general image: {img_url[:80]}...")
+        
+        logger.info(f"Total images fetched: {len(place_images)}")
         
     except Exception as e:
-        logger.error(f"Error extracting and fetching images: {str(e)}")
+        logger.error(f"Error extracting and fetching images: {str(e)}", exc_info=True)
         # Fallback: fetch general destination images
         try:
+            logger.info(f"Falling back to general destination images for {destination}")
             general_images = unsplash_service.get_destination_images(destination, count=num_images)
             for idx, img_url in enumerate(general_images):
                 place_images.append(PlaceImage(
-                    place=f"{destination} - View {idx + 1}",
+                    place=f"{destination} - Attraction {idx + 1}",
                     image_url=img_url
                 ))
+            logger.info(f"Fallback successful: {len(place_images)} images fetched")
         except Exception as fallback_error:
             logger.error(f"Fallback image fetch also failed: {str(fallback_error)}")
     
     return place_images
-
 
 
 def parse_itinerary_to_daily_plan(text: str, duration: int, start_date: str):
@@ -274,6 +295,8 @@ def parse_itinerary_to_daily_plan(text: str, duration: int, start_date: str):
         )
 
     return days
+
+
 async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
     """Generate a travel plan based on the request and log status/output to database."""
     trip_plan_id = request.trip_plan_id
@@ -331,7 +354,7 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
             current_step="Researching about the destination",
         )
 
-         # Destination Research using Groq
+        # Destination Research using Groq
         destination_research_content = await destination_agent_groq.arun(
             f"""
             Research destination: {request.travel_plan.destination}
@@ -348,7 +371,7 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
         )
 
         logger.info(
-              f"Destination research response: {destination_research_content[:500]}..."
+            f"Destination research response: {destination_research_content[:500]}..."
         )
 
         # Store agent responses separately, don't accumulate
@@ -365,7 +388,7 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
             status="processing",
             current_step="Searching for the best flights",
         )
-               # Flight Search using Groq
+        # Flight Search using Groq
         flight_search_content = await flight_agent_groq.arun(
             f"""
             Find flights for:
@@ -384,7 +407,6 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
             f"Flight search response: {flight_search_content[:500]}..."
         )
 
-     
         last_response_content += f"""
         ## Flight recommendations:
         ---
@@ -398,7 +420,7 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
             status="processing",
             current_step="Searching for the best hotels",
         )
-              # Hotel Search using Groq
+        # Hotel Search using Groq
         hotel_search_content = await hotel_agent_groq.arun(
             f"""
             Find hotels for:
@@ -413,8 +435,6 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
             Be concise.
             """
         )
-
-
 
         last_response_content += f"""
         ## Hotel recommendations:
@@ -446,8 +466,6 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
             Be concise.
             """
         )
-
-
 
         last_response_content += f"""
         ## Restaurant recommendations:
@@ -489,7 +507,7 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
         )
     
         logger.info(f"Itinerary response: {itinerary_content[:500]}...")
-         # Parse itinerary into structured format
+        # Parse itinerary into structured format
         parsed_daily_plan = parse_itinerary_to_daily_plan(
             itinerary_content, 
             request.travel_plan.duration,
@@ -525,21 +543,21 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
         )
         logger.info(f"Budget response: {budget_content[:500]}...")
          
-        # Update status for image fetching
+          # Update status for image fetching
         await update_trip_plan_status(
             trip_plan_id=trip_plan_id,
             status="processing",
-            current_step="Fetching images from Unsplash",
+            current_step="Fetching real images from Unsplash",
         )
         
-        # Fetch images for key places
+        # Fetch images for key places (increased to 8 for better coverage)
         place_images = await extract_and_fetch_images(
             destination=request.travel_plan.destination,
             destination_content=destination_research_content,
             itinerary_content=itinerary_content,
-            num_images=5
+            num_images=8
         )
-        logger.info(f"Fetched {len(place_images)} place images")
+        logger.info(f"✅ Fetched {len(place_images)} real place images from Unsplash")
         
         # Generate Product Recommendations using Groq
         logger.info("Generating product recommendations...")
@@ -600,7 +618,7 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
             
             # Ensure day_by_day_plan exists and is populated
             if "day_by_day_plan" not in response_dict or not response_dict["day_by_day_plan"]:
-                 # Use parsed daily plan from itinerary
+                # Use parsed daily plan from itinerary
                 response_dict["day_by_day_plan"] = parsed_daily_plan
                 logger.info(f"Using parsed daily plan with {len(parsed_daily_plan)} days")
             

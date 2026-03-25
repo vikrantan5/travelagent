@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { query, queryOne } from '@/lib/db';
 import { auth } from '@/lib/auth';
 
 export async function POST(
@@ -21,16 +21,10 @@ export async function POST(
     }
 
     // First check if the plan exists and belongs to the user
-    const tripPlan = await prisma.tripPlan.findUnique({
-      where: {
-        id,
-        userId: session.user.id
-      },
-      include: {
-        status: true,
-        output: true,
-      },
-    });
+    const tripPlan = await queryOne<any>(
+      `SELECT * FROM trip_plan WHERE id = $1 AND user_id = $2`,
+      [id, session.user.id]
+    );
 
     if (!tripPlan) {
       return NextResponse.json(
@@ -43,18 +37,13 @@ export async function POST(
     }
 
     // Update the status to pending/processing
-    await prisma.tripPlanStatus.upsert({
-      where: { tripPlanId: id },
-      update: {
-        status: 'processing',
-        currentStep: 'Restarting trip plan generation...',
-      },
-      create: {
-        tripPlanId: id,
-        status: 'processing',
-        currentStep: 'Restarting trip plan generation...',
-      },
-    });
+    await query(
+      `INSERT INTO trip_plan_status (trip_plan_id, status, current_step, created_at, updated_at)
+       VALUES ($1, $2, $3, NOW(), NOW())
+       ON CONFLICT (trip_plan_id) 
+       DO UPDATE SET status = $2, current_step = $3, updated_at = NOW()`,
+      [id, 'processing', 'Restarting trip plan generation...']
+    );
 
     // Prepare the request body for the backend API
     const requestBody = {
@@ -62,29 +51,29 @@ export async function POST(
       travel_plan: {
         name: tripPlan.name,
         destination: tripPlan.destination,
-        starting_location: tripPlan.startingLocation,
+        starting_location: tripPlan.starting_location,
         travel_dates: {
-          start: tripPlan.travelDatesStart,
-          end: tripPlan.travelDatesEnd || ""
+          start: tripPlan.travel_dates_start,
+          end: tripPlan.travel_dates_end || ""
         },
-        date_input_type: tripPlan.dateInputType,
+        date_input_type: tripPlan.date_input_type,
         duration: tripPlan.duration,
-        traveling_with: tripPlan.travelingWith,
+        traveling_with: tripPlan.traveling_with,
         adults: tripPlan.adults,
         children: tripPlan.children,
-        age_groups: tripPlan.ageGroups,
+        age_groups: tripPlan.age_groups,
         budget: tripPlan.budget,
-        budget_currency: tripPlan.budgetCurrency,
-        travel_style: tripPlan.travelStyle,
-        budget_flexible: tripPlan.budgetFlexible,
+        budget_currency: tripPlan.budget_currency,
+        travel_style: tripPlan.travel_style,
+        budget_flexible: tripPlan.budget_flexible,
         vibes: tripPlan.vibes,
         priorities: tripPlan.priorities,
         interests: tripPlan.interests || "",
         rooms: tripPlan.rooms,
         pace: tripPlan.pace,
-        been_there_before: tripPlan.beenThereBefore || "",
-        loved_places: tripPlan.lovedPlaces || "",
-        additional_info: tripPlan.additionalInfo || ""
+        been_there_before: tripPlan.been_there_before || "",
+        loved_places: tripPlan.loved_places || "",
+        additional_info: tripPlan.additional_info || ""
       }
     };
 
@@ -99,13 +88,12 @@ export async function POST(
 
     if (!backendResponse.ok) {
       // If backend call fails, update status back to failed
-      await prisma.tripPlanStatus.update({
-        where: { tripPlanId: id },
-        data: {
-          status: 'failed',
-          currentStep: 'Failed to restart trip plan generation',
-        },
-      });
+      await query(
+        `UPDATE trip_plan_status 
+         SET status = $1, current_step = $2, updated_at = NOW()
+         WHERE trip_plan_id = $3`,
+        ['failed', 'Failed to restart trip plan generation', id]
+      );
 
       console.error('Backend API error:', await backendResponse.text());
       return NextResponse.json(
@@ -133,13 +121,12 @@ export async function POST(
 
     // Ensure we update the status to failed if there's an error
     try {
-      await prisma.tripPlanStatus.update({
-        where: { tripPlanId: id },
-        data: {
-          status: 'failed',
-          currentStep: 'Error occurred while retrying',
-        },
-      });
+      await query(
+        `UPDATE trip_plan_status 
+         SET status = $1, current_step = $2, updated_at = NOW()
+         WHERE trip_plan_id = $3`,
+        ['failed', 'Error occurred while retrying', id]
+      );
     } catch (statusError) {
       console.error('Failed to update status after error:', statusError);
     }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { queryOne } from '@/lib/db';
 import { auth } from '@/lib/auth';
+import { randomUUID } from 'crypto';
 
 interface TripFormData {
   name: string;
@@ -57,40 +58,54 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Save to database
-    const savedTripPlan = await prisma.tripPlan.create({
-      data: {
-        name: tripData.name,
-        destination: tripData.destination,
-        startingLocation: tripData.startingLocation,
-        travelDatesStart: tripData.travelDates.start,
-        travelDatesEnd: tripData.travelDates.end || null,
-        dateInputType: tripData.dateInputType || "picker",
-        duration: tripData.duration || null,
-        travelingWith: tripData.travelingWith,
-        adults: tripData.adults || 1,
-        children: tripData.children || 0,
-        ageGroups: tripData.ageGroups || [],
-        budget: tripData.budget,
-        budgetCurrency: tripData.budgetCurrency || "USD",
-        travelStyle: tripData.travelStyle,
-        budgetFlexible: tripData.budgetFlexible || false,
-        vibes: tripData.vibes || [],
-        priorities: tripData.priorities || [],
-        interests: tripData.interests || null,
-        rooms: tripData.rooms || 1,
-        pace: tripData.pace || [3],
-        beenThereBefore: tripData.beenThereBefore || null,
-        lovedPlaces: tripData.lovedPlaces || null,
-        additionalInfo: tripData.additionalInfo || null,
-        userId: session.user.id
-      }
-    });
+    // Generate a unique ID
+    const tripPlanId = randomUUID();
 
-    console.log('Trip plan saved to database:', savedTripPlan.id);
+    // Save to database using raw SQL
+    const savedTripPlan = await queryOne<any>(
+      `INSERT INTO trip_plan (
+        id, name, destination, starting_location, travel_dates_start, travel_dates_end,
+        date_input_type, duration, traveling_with, adults, children, age_groups,
+        budget, budget_currency, travel_style, budget_flexible, vibes, priorities,
+        interests, rooms, pace, been_there_before, loved_places, additional_info,
+        user_id, created_at, updated_at
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18,
+        $19, $20, $21, $22, $23, $24, $25, NOW(), NOW()
+      ) RETURNING id`,
+      [
+        tripPlanId,
+        tripData.name,
+        tripData.destination,
+        tripData.startingLocation,
+        tripData.travelDates.start,
+        tripData.travelDates.end || null,
+        tripData.dateInputType || "picker",
+        tripData.duration || null,
+        tripData.travelingWith,
+        tripData.adults || 1,
+        tripData.children || 0,
+        tripData.ageGroups || [],
+        tripData.budget,
+        tripData.budgetCurrency || "USD",
+        tripData.travelStyle,
+        tripData.budgetFlexible || false,
+        tripData.vibes || [],
+        tripData.priorities || [],
+        tripData.interests || null,
+        tripData.rooms || 1,
+        tripData.pace || [3],
+        tripData.beenThereBefore || null,
+        tripData.lovedPlaces || null,
+        tripData.additionalInfo || null,
+        session.user.id
+      ]
+    );
+
+    console.log('Trip plan saved to database:', tripPlanId);
 
     const requestBody = {
-      trip_plan_id: savedTripPlan.id,
+      trip_plan_id: tripPlanId,
       travel_plan: {
         name: tripData.name,
         destination: tripData.destination,
@@ -150,7 +165,7 @@ export async function POST(request: NextRequest) {
         success: true,
         message: 'Trip planning triggered successfully',
         response: responseData,
-        tripPlanId: savedTripPlan.id
+        tripPlanId: tripPlanId
       },
       { status: 200 }
     );

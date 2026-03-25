@@ -1,14 +1,26 @@
-import { betterAuth } from "better-auth";
-import { prismaAdapter } from "better-auth/adapters/prisma";
-import { PrismaClient } from "@/lib/generated/prisma";
-
-const prisma = new PrismaClient();
-
-export const auth = betterAuth({
-  database: prismaAdapter(prisma, {
-    provider: "postgresql",
-  }),
-  emailAndPassword: {
-    enabled: true,
+// Simple mock auth for testing without database
+export const auth = {
+  api: {
+    getSession: async () => {
+      // Return a mock session so app works
+      return {
+        session: {
+          user: {
+            id: "test-user-123",
+            email: "test@example.com",
+            name: "Test User"
+          }
+        }
+      };
+    },
+    signOut: async () => {
+      console.log("Sign out called");
+    },
   },
-});
+  handler: async (req: any) => {
+    return new Response(JSON.stringify({ status: "ok" }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  },
+};

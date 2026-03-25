@@ -613,8 +613,15 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
             response_dict["duration"] = f"{request.travel_plan.duration} Days"
             response_dict["budget_estimate"] = f"{request.travel_plan.budget} {request.travel_plan.budget_currency}"
             
-            # Add place images
+            # ✅ FORCE OVERRIDE: Use ONLY backend-fetched Unsplash images
+            # Remove any AI-generated image URLs from response_dict
+            if "images" in response_dict:
+                logger.info("⚠️ Removing AI-generated images array")
+                del response_dict["images"]
+            
+            # Add ONLY backend-fetched place images (real images.unsplash.com URLs)
             response_dict["images"] = [img.model_dump() for img in place_images]
+            logger.info(f"✅ Added {len(place_images)} backend-fetched images to response")
             
             # Ensure day_by_day_plan exists and is populated
             if "day_by_day_plan" not in response_dict or not response_dict["day_by_day_plan"]:
@@ -626,19 +633,28 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
             if "day_by_day_plan" in response_dict:
                 response_dict["daily_plan"] = response_dict["day_by_day_plan"]
                 
-                # Fetch an image for each day if not already present
+                # ✅ CRITICAL FIX: ALWAYS OVERRIDE image_url for each day
+                # DO NOT trust AI-generated image URLs - they use source.unsplash.com which is unreliable
+                logger.info(f"🔧 Force overriding image URLs for {len(response_dict['daily_plan'])} days")
+                
                 for idx, day in enumerate(response_dict["daily_plan"]):
-                    if not day.get("image_url"):
-                        # Use existing place images or fetch new one
-                        if idx < len(place_images):
-                            day["image_url"] = place_images[idx].image_url
-                        else:
-                            # Fetch a generic destination image
-                            img_url = unsplash_service.get_image_for_place(
-                                f"Day {day.get('day', idx+1)} {request.travel_plan.destination}",
-                                request.travel_plan.destination
-                            )
-                            day["image_url"] = img_url if img_url else ""
+                    # Remove any existing AI-generated image_url
+                    if day.get("image_url"):
+                        logger.info(f"⚠️ Day {idx+1} had AI-generated image URL, overriding...")
+                    
+                    # ALWAYS assign backend-fetched image (sequential mapping)
+                    if idx < len(place_images):
+                        day["image_url"] = place_images[idx].image_url
+                        logger.info(f"✅ Day {idx+1}: Assigned image from place_images[{idx}]")
+                    else:
+                        # Fallback: fetch additional image if needed
+                        logger.info(f"⚠️ Day {idx+1}: Not enough place images, fetching fallback...")
+                        img_url = unsplash_service.get_image_for_place(
+                            f"{request.travel_plan.destination}",
+                            request.travel_plan.destination
+                        )
+                        day["image_url"] = img_url if img_url else ""
+                        logger.info(f"✅ Day {idx+1}: Assigned fallback image: {img_url[:80] if img_url else 'None'}...")
             
             # Add product suggestions (convert from products format)
             if products:

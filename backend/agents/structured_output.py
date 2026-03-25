@@ -58,6 +58,8 @@ async def convert_to_model(input_text: str, target_model: Type[T]) -> str:
         instructions=[
             "Your task is to convert the input text into a valid JSON that matches the model schema exactly.",
             "You must return ONLY the JSON object that matches the schema exactly - no other output.",
+             "CRITICAL: DO NOT generate image URLs. Leave all image_url fields empty ('').",
+            "CRITICAL: DO NOT populate the 'images' array. Backend will fetch real images.",
             "When formatting text fields, you must:",
             "- Use minimal, consistent formatting throughout",
             "- Apply appropriate list formatting",
@@ -90,6 +92,13 @@ async def convert_to_model(input_text: str, target_model: Type[T]) -> str:
     - Field types must match schema exactly
     - No extra fields allowed
     - Validate all constraints (min/max values, regex patterns, etc)
+    
+    ⚠️ CRITICAL IMAGE URL RULES:
+    - DO NOT generate image URLs for any field
+    - Leave ALL image_url fields as EMPTY strings ("")
+    - DO NOT use source.unsplash.com URLs
+    - DO NOT populate the "images" array
+    - Images will be fetched separately by the backend using real Unsplash API
 
     Text Formatting Requirements:
     - Use consistent, clean text formatting throughout all string fields

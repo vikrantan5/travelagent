@@ -75,6 +75,7 @@ interface DayPlan {
   afternoon: string;
   evening: string;
   notes?: string;
+  
 }
 
 interface Hotel {

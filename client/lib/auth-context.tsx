@@ -1,11 +1,19 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { getCurrentUser, logout as logoutUser, User } from "@/lib/auth";
+import { 
+  getCurrentUser, 
+  logout as logoutUser, 
+  login as loginUser, 
+  register as registerUser, 
+  User 
+} from "@/lib/auth";
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -32,13 +40,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshUser();
   }, []);
 
+  const login = async (email: string, password: string) => {
+    const response = await loginUser(email, password);
+    setUser(response.user);
+  };
+
+  const register = async (email: string, password: string, name: string) => {
+    const response = await registerUser(email, password, name);
+    setUser(response.user);
+  };
+
   const logout = async () => {
     await logoutUser();
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, isLoading, login, register, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

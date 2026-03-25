@@ -36,6 +36,12 @@ export default function Header() {
 
           {/* Desktop Menu */}
           <nav className="hidden md:flex items-center gap-6">
+             <Link
+              href="/compare"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Compare Destinations
+            </Link>
             {session?.user && (
               <Link
                 href="/plans"
@@ -96,6 +102,13 @@ export default function Header() {
         <div className="md:hidden bg-card border-t border-border">
           <div className="px-4 pt-2 pb-4 space-y-4">
             <nav className="flex flex-col gap-4">
+               <Link
+                href="/compare"
+                className="text-base font-medium text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Compare Destinations
+              </Link>
               {session?.user && (
                 <Link
                   href="/plans"

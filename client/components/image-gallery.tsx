@@ -17,12 +17,15 @@ interface ImageGalleryProps {
 }
 
 export function ImageGallery({ images, destination }: ImageGalleryProps) {
-  if (!images || images.length === 0) {
+   // Add safe guard for images
+  const safeImages = Array.isArray(images) ? images : [];
+  
+  if (!safeImages || safeImages.length === 0) {
     return null;
   }
 
-  const heroImage = images[0];
-  const otherImages = images.slice(1);
+    const heroImage = safeImages[0];
+  const otherImages = safeImages.slice(1);
 
   return (
     <section className="mt-12">

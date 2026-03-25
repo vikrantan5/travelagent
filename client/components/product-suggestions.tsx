@@ -22,7 +22,10 @@ interface ProductSuggestionsProps {
 }
 
 export function ProductSuggestions({ products }: ProductSuggestionsProps) {
-  if (!products || products.length === 0) {
+  // Add safe guard for products
+  const safeProducts = Array.isArray(products) ? products : [];
+  
+  if (!safeProducts || safeProducts.length === 0) {
     return null;
   }
 
@@ -60,7 +63,7 @@ export function ProductSuggestions({ products }: ProductSuggestionsProps) {
         Essential items to make your trip more comfortable and enjoyable
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {products.map((product, index) => {
+          {safeProducts.map((product, index) => {
           const productUrl = product.amazon_url || product.link || "#";
           const reason = product.reason || product.why_needed || "Useful for your trip";
           

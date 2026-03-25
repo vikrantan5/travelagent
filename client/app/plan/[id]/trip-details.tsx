@@ -49,6 +49,9 @@ import { useSwipeable } from "react-swipeable";
 import { motion, AnimatePresence } from "framer-motion";
 import { ProductSuggestions } from "@/components/product-suggestions";
 import { ImageGallery } from "@/components/image-gallery";
+import { generateTripPDF } from "@/lib/pdf-generator";
+import { Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
 // Type Definitions
 interface PlaceImage {
   place: string;
@@ -290,6 +293,7 @@ export default function TripDetails() {
   const [polling, setPolling] = useState(false);
   const [retryLoading, setRetryLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("itinerary");
+   const [downloadingPDF, setDownloadingPDF] = useState(false);
 
   const tabs = [
     "itinerary",
@@ -382,10 +386,13 @@ export default function TripDetails() {
             itinerary_agent_response =
               parsedOutput.itinerary_agent_response || "";
 
-             // Extract images and products
-            place_images = parsedOutput.images || [];
-            products = parsedOutput.product_recommendations || parsedOutput.products || [];
-
+             // Extract images and products with safe defaults
+            place_images = Array.isArray(parsedOutput.images) ? parsedOutput.images : [];
+            products = Array.isArray(parsedOutput.product_recommendations) 
+              ? parsedOutput.product_recommendations 
+              : Array.isArray(parsedOutput.products) 
+                ? parsedOutput.products 
+                : [];
             if (parsedOutput.itinerary) {
               // Then parse the inner JSON string to get the actual itinerary
               itinerary = JSON.parse(parsedOutput.itinerary) as Itinerary;
@@ -497,6 +504,23 @@ export default function TripDetails() {
     }
   };
 
+
+
+  // Function to download PDF
+  const handleDownloadPDF = async () => {
+    if (!trip) return;
+    
+    try {
+      setDownloadingPDF(true);
+      umami.track("Download Trip PDF", { tripId: trip.id, destination: trip.destination });
+      await generateTripPDF(trip);
+    } catch (err) {
+      console.error("Error generating PDF:", err);
+      alert("Failed to generate PDF. Please try again.");
+    } finally {
+      setDownloadingPDF(false);
+    }
+  };
   // Initial fetch
   useEffect(() => {
     fetchTripDetails();
@@ -555,8 +579,8 @@ export default function TripDetails() {
   return (
     <div className="container mx-auto p-4 sm:p-6 md:p-8 space-y-8">
       <header className="flex flex-col space-y-2">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-          <div>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex-1">
             {trip.destination && (
               <h1 className="text-3xl sm:text-4xl font-bold tracking-tight flex items-center">
                 <MapPin className="h-6 w-6 mr-2 text-primary" />
@@ -567,7 +591,7 @@ export default function TripDetails() {
               <p className="text-xl text-muted-foreground mt-1">{trip.name}</p>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {polling && (
               <div className="flex items-center text-sm text-muted-foreground">
                 <Loader2 className="h-3 w-3 animate-spin mr-1" />
@@ -575,6 +599,27 @@ export default function TripDetails() {
               </div>
             )}
             <StatusBadge status={trip.status} />
+              {trip.status === "completed" && (
+              <Button
+                onClick={handleDownloadPDF}
+                disabled={downloadingPDF}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                {downloadingPDF ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4" />
+                    Download PDF
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </div>
       </header>

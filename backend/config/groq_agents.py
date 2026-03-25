@@ -145,14 +145,18 @@ itinerary_agent_groq = GroqAgent(
     name="Itinerary Planner",
     role="day-by-day itinerary specialist",
     instructions=[
-        "Create detailed day-by-day itineraries",
-        "Include specific timing for morning, afternoon, evening activities",
-        "Balance activities with rest periods",
-        "Consider travel time between locations",
-        "Add practical tips for each day",
-        "Format with clear day headers and emojis"
+        "Create detailed day-by-day itineraries with CLEAR structure:",
+        "- Each day must have: Day number, Morning activities, Afternoon activities, Evening activities",
+        "- Use format: '## Day X' for each day header",
+        "- Under each day, use '**Morning:**', '**Afternoon:**', '**Evening:**' sections",
+        "- Include specific timing (e.g., 9:00 AM, 2:00 PM)",
+        "- Balance activities with rest periods",
+        "- Consider travel time between locations",
+        "- Add practical tips at the end of each day",
+        "- Keep descriptions concise (2-3 sentences per time slot)"
     ],
-    temperature=0.3
+    temperature=0.3,
+    max_tokens=2000
 )
 
 # Product Recommendation Agent (NEW)

@@ -72,6 +72,10 @@ def travel_request_to_markdown(data: TravelPlanRequest) -> str:
         5: "6+ activities per day with back-to-back scheduling",
     }
 
+
+
+
+    
     def format_date(date_str: str, is_picker: bool) -> str:
         if not date_str:
             return "Not specified"
@@ -232,6 +236,44 @@ async def extract_and_fetch_images(
     return place_images
 
 
+
+def parse_itinerary_to_daily_plan(text: str, duration: int, start_date: str):
+    import re
+    from datetime import datetime, timedelta
+
+    days = []
+    day_blocks = re.split(r"##\s*Day\s*\d+", text, flags=re.IGNORECASE)[1:]
+
+    if not day_blocks:
+        return []
+
+    try:
+        base_date = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
+    except:
+        base_date = None
+
+    for i, block in enumerate(day_blocks[:duration]):
+        morning = re.search(r"\*\*Morning:\*\*(.*?)(\*\*|$)", block, re.S)
+        afternoon = re.search(r"\*\*Afternoon:\*\*(.*?)(\*\*|$)", block, re.S)
+        evening = re.search(r"\*\*Evening:\*\*(.*?)(\*\*|$)", block, re.S)
+
+        day_date = (
+            (base_date + timedelta(days=i)).strftime("%Y-%m-%d")
+            if base_date else ""
+        )
+
+        days.append(
+            {
+                "day": i + 1,
+                "date": day_date,
+                "morning": (morning.group(1).strip() if morning else ""),
+                "afternoon": (afternoon.group(1).strip() if afternoon else ""),
+                "evening": (evening.group(1).strip() if evening else ""),
+                "image_url": "",
+            }
+        )
+
+    return days
 async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
     """Generate a travel plan based on the request and log status/output to database."""
     trip_plan_id = request.trip_plan_id
@@ -427,20 +469,33 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
         # Itinerary using Groq - Use summarized context
         itinerary_content = await itinerary_agent_groq.arun(
             f"""
-            Create a {request.travel_plan.duration}-day itinerary for {request.travel_plan.destination}
+            Create a detailed {request.travel_plan.duration}-day itinerary for {request.travel_plan.destination}
             
             Trip info:
-            - Travelers: {request.travel_plan.adults} adults, {request.travel_plan.children} children
-            - Pace: {request.travel_plan.pace}
-            - Style: {request.travel_plan.travel_style}
-            - Vibes: {', '.join(request.travel_plan.vibes)}
+            - Duration: {request.travel_plan.duration} days
+            - Travelers: {request.travel_plan.adults} adults{f', {request.travel_plan.children} children' if request.travel_plan.children else ''}
+            - Travel style: {request.travel_plan.travel_style}
+            - Vibes: {', '.join(request.travel_plan.vibes[:3])}
             
-            Create day-by-day plan with morning, afternoon, evening activities.
-            Be specific with timing but concise with descriptions.
+            IMPORTANT: Structure each day clearly with:
+            ## Day 1
+            **Morning:** [activities with timing]
+            **Afternoon:** [activities with timing]
+            **Evening:** [activities with timing]
+            
+            Create {request.travel_plan.duration} days following this exact structure.
+            Be specific with timings and locations.
             """
         )
     
         logger.info(f"Itinerary response: {itinerary_content[:500]}...")
+         # Parse itinerary into structured format
+        parsed_daily_plan = parse_itinerary_to_daily_plan(
+            itinerary_content, 
+            request.travel_plan.duration,
+            request.travel_plan.travel_dates.start
+        )
+        logger.info(f"Parsed {len(parsed_daily_plan)} days from itinerary")
 
         last_response_content += f"""
         ## Day-by-day itinerary:
@@ -505,16 +560,36 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
             current_step="Adding finishing touches",
         )
 
-        json_response_output = await convert_to_model(
-            last_response_content, TravelPlanTeamResponse
-        )
-        logger.info(f"Converted Structured Response: {json_response_output[:500]}...")
-
-         # Parse the JSON response to add our custom fields
+        # Try to convert to structured format, but with better error handling
+        json_response_output = None
+        response_dict = {}
+        
         try:
+            json_response_output = await convert_to_model(
+                last_response_content, TravelPlanTeamResponse
+            )
+            logger.info(f"Converted Structured Response: {json_response_output[:500]}...")
             response_dict = json.loads(json_response_output)
-            
-            # Add new format fields
+        except Exception as conversion_error:
+            logger.error(f"Error in structured conversion: {str(conversion_error)}")
+            # Create a minimal valid structure
+            response_dict = {
+                "title": f"{request.travel_plan.duration} Days in {request.travel_plan.destination}",
+                "destination": request.travel_plan.destination,
+                "duration": f"{request.travel_plan.duration} Days",
+                "budget_estimate": f"{request.travel_plan.budget} {request.travel_plan.budget_currency}",
+                "day_by_day_plan": [],
+                "hotels": [],
+                "attractions": [],
+                "flights": [],
+                "restaurants": [],
+                "budget_insights": [],
+                "tips": []
+            }
+
+        # Parse the JSON response to add our custom fields
+        try:
+            # Add new format fields (ensure they exist)
             response_dict["title"] = f"{request.travel_plan.duration} Days in {request.travel_plan.destination}"
             response_dict["destination"] = request.travel_plan.destination
             response_dict["duration"] = f"{request.travel_plan.duration} Days"
@@ -522,6 +597,12 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
             
             # Add place images
             response_dict["images"] = [img.model_dump() for img in place_images]
+            
+            # Ensure day_by_day_plan exists and is populated
+            if "day_by_day_plan" not in response_dict or not response_dict["day_by_day_plan"]:
+                 # Use parsed daily plan from itinerary
+                response_dict["day_by_day_plan"] = parsed_daily_plan
+                logger.info(f"Using parsed daily plan with {len(parsed_daily_plan)} days")
             
             # Rename day_by_day_plan to daily_plan for new format
             if "day_by_day_plan" in response_dict:
@@ -559,7 +640,8 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
             
         except Exception as parse_error:
             logger.error(f"Error parsing response for custom fields: {str(parse_error)}")
-            # Continue with original response
+            # Create minimal valid JSON if all else fails
+            json_response_output = json.dumps(response_dict, indent=2)
 
         # Delete any existing output entries for this trip plan
         await delete_trip_plan_outputs(trip_plan_id=trip_plan_id)

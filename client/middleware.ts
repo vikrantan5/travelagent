@@ -1,32 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL
-
 export async function middleware(request: NextRequest) {
-
-  console.log("Host: ", BASE_URL);
-
-  const url = `${BASE_URL}/api/auth/get-session`;
-
-  console.log("URL: ", url);
-
-  const response = await fetch(url, {
-    headers: {
-      cookie: request.headers.get("cookie") || "",
-    },
-  });
-
-  if (!response.ok) {
+  // Check for auth token in cookies
+  const authToken = request.cookies.get("auth_token")?.value;
+  
+  // If no auth token, redirect to auth page
+  if (!authToken) {
     return NextResponse.redirect(new URL("/auth", request.url));
   }
 
-  const session = await response.json();
+  // Verify token with backend
+  const backendUrl = process.env.BACKEND_API_URL || "http://localhost:8000";
+  
+  try {
+    const response = await fetch(`${backendUrl}/api/auth/me`, {
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+      },
+    });
 
-  if (!session) {
+    if (!response.ok) {
+      // Invalid token, redirect to auth
+      return NextResponse.redirect(new URL("/auth", request.url));
+    }
+
+    // Token is valid, allow access
+    return NextResponse.next();
+  } catch (error) {
+    console.error("Auth verification error:", error);
+    // On error, redirect to auth page
     return NextResponse.redirect(new URL("/auth", request.url));
   }
-
-  return NextResponse.next();
 }
 
 export const config = {

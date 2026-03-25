@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { authClient } from "@/lib/auth-client";
+import { useAuth } from "@/lib/auth-context";
 import { umami } from "@/lib/umami";
 import {
   Card,
@@ -227,12 +227,8 @@ export default function PlanForm() {
    const [showPaymentModal, setShowPaymentModal] = useState(false);
   const router = useRouter();
 
-  // Better Auth session hook
-  const {
-    data: session,
-    isPending: sessionLoading,
-    error: sessionError,
-  } = authClient.useSession();
+  // JWT Auth hook
+  const { user, loading: sessionLoading } = useAuth();
 
   const form = useForm<TripFormData>({
     defaultValues: {
@@ -256,14 +252,14 @@ export default function PlanForm() {
     },
   });
 
-  // Prefill user name when session data is available
+  // Prefill user name when user data is available
   useEffect(() => {
-    if (session?.user?.name && !form.getValues("name")) {
-      form.setValue("name", session.user.name);
+    if (user?.name && !form.getValues("name")) {
+      form.setValue("name", user.name);
     }
-  }, [session, form]);
+  }, [user, form]);
 
-  // Handle session loading and error states
+  // Handle session loading state
   if (sessionLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -275,10 +271,7 @@ export default function PlanForm() {
     );
   }
 
-  if (sessionError) {
-    console.error("Session error:", sessionError);
-    // Continue without session data - allow anonymous users
-  }
+
 
   const onSubmit = async (data: TripFormData) => {
     if (isSubmitting) {

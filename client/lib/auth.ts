@@ -19,10 +19,12 @@ export interface AuthResponse {
   user: User;
 }
 
-// Store token in localStorage
+// Store token in localStorage and cookies
 export const setAuthToken = (token: string) => {
   if (typeof window !== 'undefined') {
     localStorage.setItem('auth_token', token);
+    // Also set cookie for middleware
+    document.cookie = `auth_token=${token}; path=/; max-age=604800; SameSite=Lax`;
   }
 };
 
@@ -34,10 +36,12 @@ export const getAuthToken = (): string | null => {
   return null;
 };
 
-// Remove token from localStorage
+// Remove token from localStorage and cookies
 export const removeAuthToken = () => {
   if (typeof window !== 'undefined') {
     localStorage.removeItem('auth_token');
+    // Remove cookie
+    document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
   }
 };
 
@@ -130,4 +134,54 @@ export const logout = async () => {
 // Check if user is authenticated
 export const isAuthenticated = (): boolean => {
   return getAuthToken() !== null;
+};
+
+
+
+// Server-side auth helper for API routes
+export const auth = {
+  api: {
+    getSession: async ({ headers }: { headers: Headers }): Promise<{ user: User } | null> => {
+      const authorization = headers.get('authorization');
+      const cookieHeader = headers.get('cookie');
+      
+      let token: string | null = null;
+      
+      // Try to get token from Authorization header
+      if (authorization?.startsWith('Bearer ')) {
+        token = authorization.substring(7);
+      }
+      
+      // Try to get token from cookies
+      if (!token && cookieHeader) {
+        const cookies = cookieHeader.split(';').map(c => c.trim());
+        const authCookie = cookies.find(c => c.startsWith('auth_token='));
+        if (authCookie) {
+          token = authCookie.split('=')[1];
+        }
+      }
+      
+      if (!token) {
+        return null;
+      }
+      
+      try {
+        const response = await fetch(`${process.env.BACKEND_API_URL}/api/auth/me`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        
+        if (!response.ok) {
+          return null;
+        }
+        
+        const user = await response.json();
+        return { user };
+      } catch (error) {
+        console.error('Error getting session:', error);
+        return null;
+      }
+    }
+  }
 };

@@ -292,14 +292,16 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
          # Destination Research using Groq
         destination_research_content = await destination_agent_groq.arun(
             f"""
-            Please research about the destination {request.travel_plan.destination}
-
-            Below are user's travel request:
-            {travel_request_md}
-
-            Provide a very detailed research about the destination, its attractions, activities, and other relevant information that user might be interested in.
-
-            Give 10 attractions/activities that user might be interested in.
+            Research destination: {request.travel_plan.destination}
+            
+            Trip details:
+            - Duration: {request.travel_plan.duration} days
+            - Budget: {request.travel_plan.budget} {request.travel_plan.budget_currency}
+            - Travel style: {request.travel_plan.travel_style}
+            - Vibes: {', '.join(request.travel_plan.vibes)}
+            
+            Provide 8-10 key attractions with brief descriptions.
+            Be concise but informative.
             """
         )
 
@@ -307,10 +309,11 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
               f"Destination research response: {destination_research_content[:500]}..."
         )
 
+        # Store agent responses separately, don't accumulate
         last_response_content = f"""
         ## Destination Attractions:
         ---
-         {destination_research_content}
+         {destination_research_content[:1500]}
         ---
 """
 
@@ -323,20 +326,15 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
                # Flight Search using Groq
         flight_search_content = await flight_agent_groq.arun(
             f"""
-            Please find flights according to the user's travel request:
-            {travel_request_md}
-
-            If user has not specified the exact flight date, please consider it by yourself based on the user's travel request.
-
-            Provide a very detailed research about the flights, its price, duration, and other relevant information that user might be interested in.
-
-            ive exactly 5-6 flight options with variety (budget-friendly, standard, and premium if possible).
-            For each flight, include:
-            - Airline name and flight number
-            - Departure and arrival times
-            - Duration and number of stops
-            - Price estimate
-            - Booking URL (use format like https://www.google.com/flights or https://www.kayak.com/flights)
+            Find flights for:
+            - Route: {request.travel_plan.starting_location} → {request.travel_plan.destination}
+            - Dates: {request.travel_plan.travel_dates.start} to {request.travel_plan.travel_dates.end}
+            - Travelers: {request.travel_plan.adults} adults, {request.travel_plan.children} children
+            - Budget: {request.travel_plan.budget} {request.travel_plan.budget_currency}
+            
+            Provide exactly 4-5 flight options with variety.
+            Include: airline, flight number, times, duration, stops, price, booking URL.
+            Be concise.
             """
         )
 
@@ -344,10 +342,11 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
             f"Flight search response: {flight_search_content[:500]}..."
         )
 
+     
         last_response_content += f"""
         ## Flight recommendations:
         ---
-        {flight_search_content}
+        {flight_search_content[:1200]}
         ---
         """
 
@@ -360,28 +359,25 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
               # Hotel Search using Groq
         hotel_search_content = await hotel_agent_groq.arun(
             f"""
-            Please find hotels according to the user's travel request:
-            {travel_request_md}
-
-            If user has not specified the exact hotel dates, please consider it by yourself based on the user's travel request.
-
-            Provide a very detailed research about the hotels, its price, amenities, and other relevant information that user might be interested in.
-
-             Give exactly 5-6 hotel options with variety (budget, mid-range, luxury).
-            For each hotel, include:
-            - Hotel name and full address
-            - Rating (out of 5 stars)
-            - Price range per night
-            - Key amenities (as a list)
-            - Description
-            - Booking URL (use format like https://www.booking.com or https://www.hotels.com)
+            Find hotels for:
+            - Destination: {request.travel_plan.destination}
+            - Dates: {request.travel_plan.travel_dates.start} to {request.travel_plan.travel_dates.end}
+            - Rooms: {request.travel_plan.rooms}
+            - Style: {request.travel_plan.travel_style}
+            - Budget: {request.travel_plan.budget} {request.travel_plan.budget_currency}
+            
+            Provide exactly 4-5 hotel options with variety.
+            Include: name, address, rating, price, key amenities, description, booking URL.
+            Be concise.
             """
         )
+
+
 
         last_response_content += f"""
         ## Hotel recommendations:
         ---
-        {hotel_search_content}
+        {hotel_search_content[:1200]}
         ---
         """
 
@@ -398,27 +394,23 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
         # Restaurant Search using Groq
         restaurant_search_content = await dining_agent_groq.arun(
             f"""
-            Please find restaurants according to the user's travel request:
-            {travel_request_md}
-
-            If user has not specified the exact restaurant dates, please consider it by yourself based on the user's travel request.
-
-            Provide a very detailed research about the restaurants, its price, menu, and other relevant information that user might be interested in.
-
-            Give exactly 5-6 restaurant options with variety (budget-friendly, mid-range, fine dining).
-            For each restaurant, include:
-            - Restaurant name and location/address
-            - Cuisine type and price range ($, $$, $$$)
-            - Description and ambiance
-            - Popular dishes
-            - Website URL or Google Maps URL
+            Find restaurants for:
+            - Destination: {request.travel_plan.destination}
+            - Preferences: {', '.join(request.travel_plan.vibes)}
+            - Budget: {request.travel_plan.budget} {request.travel_plan.budget_currency}
+            
+            Provide exactly 4-5 restaurant options with variety.
+            Include: name, location, cuisine, price range, description, popular dishes, URL.
+            Be concise.
             """
         )
+
+
 
         last_response_content += f"""
         ## Restaurant recommendations:
         ---
-        {restaurant_search_content}
+        {restaurant_search_content[:1200]}
         ---
         """
 
@@ -432,23 +424,28 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
             status="processing",
             current_step="Creating the day-by-day itinerary",
         )
-        # Itinerary using Groq
+        # Itinerary using Groq - Use summarized context
         itinerary_content = await itinerary_agent_groq.arun(
             f"""
-            Please create a detailed day-by-day itinerary for a trip to {request.travel_plan.destination}  for user's travel request:
-            {travel_request_md}
-
-            Based on the following information:
-            {last_response_content}
+            Create a {request.travel_plan.duration}-day itinerary for {request.travel_plan.destination}
+            
+            Trip info:
+            - Travelers: {request.travel_plan.adults} adults, {request.travel_plan.children} children
+            - Pace: {request.travel_plan.pace}
+            - Style: {request.travel_plan.travel_style}
+            - Vibes: {', '.join(request.travel_plan.vibes)}
+            
+            Create day-by-day plan with morning, afternoon, evening activities.
+            Be specific with timing but concise with descriptions.
             """
         )
-
+    
         logger.info(f"Itinerary response: {itinerary_content[:500]}...")
 
         last_response_content += f"""
         ## Day-by-day itinerary:
         ---
-        {itinerary_content}
+        {itinerary_content[:1500]}
         ---
         """
 
@@ -458,17 +455,19 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
             status="processing",
             current_step="Optimizing the budget",
         )
-        # Budget using Groq
+        # Budget using Groq - Use summarized context
         budget_content = await budget_agent_groq.arun(
             f"""
-            Please optimize the budget according to the user's travel request:
-            {travel_request_md}
-
-            Based on the following information:
-            {last_response_content}
+            Create budget breakdown for:
+            - Destination: {request.travel_plan.destination}
+            - Duration: {request.travel_plan.duration} days
+            - Budget: {request.travel_plan.budget} {request.travel_plan.budget_currency}
+            - Travelers: {request.travel_plan.adults} adults, {request.travel_plan.children} children
+            
+            Provide concise breakdown by category: flights, hotels, food, activities, transport.
+            Include tips for saving money.
             """
         )
-
         logger.info(f"Budget response: {budget_content[:500]}...")
          
         # Update status for image fetching

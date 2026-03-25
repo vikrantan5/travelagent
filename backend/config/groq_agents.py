@@ -19,7 +19,7 @@ class GroqAgent:
         instructions: List[str],
       model: str = "llama-3.3-70b-versatile",
         temperature: float = 0.3,
-        max_tokens: int = 8096
+          max_tokens: int = 3000
     ):
         self.name = name
         self.role = role
@@ -77,15 +77,11 @@ destination_agent_groq = GroqAgent(
     name="Destination Explorer",
     role="destination research specialist",
     instructions=[
-        "Research and provide detailed information about travel destinations",
-        "Focus on attractions, activities, and experiences that match user preferences",
-        "Provide practical information: opening hours, entrance fees, typical visit duration",
-        "Organize information logically with main attractions first",
-        "Include hidden gems and local experiences",
+        "Research destinations with focus on user preferences",
+        "Provide 8-10 attractions with brief descriptions",
+        "Include practical info: hours, fees, visit duration",
         "Consider seasonality and current events",
-        "Provide at least 10 detailed attraction recommendations",
-        "Include cultural context and local tips",
-        "Format output in clear Markdown with emojis"
+        "Format in clear Markdown with emojis"
     ],
     temperature=0.3
 )
@@ -93,38 +89,26 @@ destination_agent_groq = GroqAgent(
 # Flight Search Agent
 flight_agent_groq = GroqAgent(
     name="Flight Search Assistant",
-    role="flight search and comparison specialist",
+    role="flight search specialist",
     instructions=[
-        "Analyze flight requirements from user travel plans",
-        "Provide realistic flight recommendations with routes, times, and estimated prices",
-        "Consider both direct and connecting flights",
-        "Include major airlines and budget carriers",
-        "Provide detailed timing (departure, arrival, duration, layovers)",
-        "Estimate realistic pricing based on route and season",
-        "Recommend exactly 5-6 flight options with variety (e.g., budget, mid-range, and premium)",
-        "Include flight numbers, airline names, and booking URLs (use Google Flights or Kayak format)",
-        "Include baggage allowances and booking tips",
-        "Format with clear sections and pricing breakdown"
+        "Provide 4-5 realistic flight options with variety",
+        "Include direct and connecting flights",
+        "Provide: airline, flight number, times, duration, stops, estimated price",
+        "Include booking URLs (Google Flights or Kayak format)",
+        "Format clearly with pricing breakdown"
     ],
     temperature=0.2
 )
-
 # Hotel Search Agent
 hotel_agent_groq = GroqAgent(
     name="Hotel Search Assistant",
-    role="accommodation research specialist",
+    role="accommodation specialist",
     instructions=[
-        "Research and recommend hotels based on user preferences",
-        "Consider budget, location, amenities, and travel style",
-         "Provide exactly 5-6 detailed hotel recommendations with variety (budget, mid-range, luxury)",
-        "Include pricing estimates, ratings (out of 5), and key amenities list",
-        "Include specific hotel names and addresses",
-        "Include booking URLs (use Booking.com or Hotels.com format)",
+        "Provide 4-5 hotels with variety (budget, mid-range, luxury)",
+        "Include: name, address, rating, price, key amenities, description",
+        "Include booking URLs (Booking.com or Hotels.com format)",
         "Consider location relative to attractions",
-        "Include family-friendly features if applicable",
-        "Provide booking tips and cancellation policies",
-        "Organize by price range and value",
-        "Format with clear sections and highlight special features"
+        "Format with clear sections"
     ],
     temperature=0.3
 )
@@ -132,18 +116,12 @@ hotel_agent_groq = GroqAgent(
 # Dining Agent
 dining_agent_groq = GroqAgent(
     name="Culinary Guide",
-    role="dining and food experience specialist",
+    role="dining specialist",
     instructions=[
-        "Research and recommend restaurants and food experiences",
-        "Match recommendations to cuisine preferences and dietary restrictions",
-        "Provide exactly 5-6 restaurant recommendations with variety (budget, mid-range, fine dining)",
-        "Include specific restaurant names and locations/addresses",
-        "Include price ranges, popular dishes, and ambiance descriptions",
-        "Include website URLs or Google Maps URLs for each restaurant",
-        "Consider meal timing and reservation requirements",
-        "Highlight local specialties and must-try dishes",
-        "Include food markets and culinary experiences where relevant",
-        "Provide local food customs and etiquette tips",
+        "Provide 4-5 restaurants with variety (budget, mid-range, fine dining)",
+        "Include: name, location, cuisine, price range, description, popular dishes",
+        "Include website or Google Maps URLs",
+        "Highlight local specialties",
         "Format with emojis and clear price indicators ($, $$, $$$)"
     ],
     temperature=0.3
@@ -152,36 +130,27 @@ dining_agent_groq = GroqAgent(
 # Budget Agent
 budget_agent_groq = GroqAgent(
     name="Budget Optimizer",
-    role="travel budget optimization specialist",
+    role="travel budget specialist",
     instructions=[
-        "Calculate comprehensive travel costs",
-        "Break down budget by category: transport, accommodation, food, activities",
-        "Identify areas where budget can be optimized",
-        "Suggest cost-saving alternatives that maintain experience quality",
+        "Calculate costs by category: transport, accommodation, food, activities",
+        "Suggest cost-saving alternatives",
         "Include hidden costs and contingencies",
-        "Provide comparison between budget-friendly and premium options",
         "Calculate daily spending estimates",
-        "Format with clear tables and total breakdowns",
-        "Highlight best value recommendations"
+        "Format with clear tables and totals"
     ],
     temperature=0.2
 )
-
 # Itinerary Agent
 itinerary_agent_groq = GroqAgent(
     name="Itinerary Planner",
-    role="day-by-day itinerary creation specialist",
+    role="day-by-day itinerary specialist",
     instructions=[
-        "Create detailed, realistic day-by-day itineraries",
+        "Create detailed day-by-day itineraries",
+        "Include specific timing for morning, afternoon, evening activities",
+        "Balance activities with rest periods",
         "Consider travel time between locations",
-        "Balance activities with rest periods based on travel pace",
-        "Include specific timing for each activity",
-        "Incorporate flight, hotel, and dining recommendations",
-        "Add morning, afternoon, and evening activities",
-        "Include backup options for weather contingencies",
-        "Provide practical tips for each day",
-        "Format with clear day headers and timeline structure",
-        "Include emoji indicators for activity types"
+        "Add practical tips for each day",
+        "Format with clear day headers and emojis"
     ],
     temperature=0.3
 )
@@ -193,7 +162,7 @@ product_agent_groq = GroqAgent(
     instructions=[
         "Recommend essential travel products based on destination and activities",
         "Consider weather, terrain, and cultural requirements",
-        "Suggest 8-10 practical items travelers should bring",
+        "Suggest 6-8 practical items travelers should bring",
         "Include categories: clothing, gadgets, accessories, health & safety",
         "Provide specific product recommendations (not generic categories)",
         "Explain why each product is needed for this specific trip",
@@ -203,7 +172,7 @@ product_agent_groq = GroqAgent(
         "Output in JSON format for easy parsing"
     ],
     temperature=0.4,
-    max_tokens=4096
+     max_tokens=2500
 )
 
 
@@ -217,19 +186,19 @@ async def generate_product_recommendations(
     Returns list of products with name, category, reason, price
     """
     prompt = f"""
-    Generate 8-10 essential travel product recommendations for this trip:
+    Generate 6-8 essential travel product recommendations for this trip:
     
     Destination: {destination}
-    Travel Plan Summary: {travel_plan}
-    Activities: {activities}
+    Duration & Budget: {travel_plan[:300]}
+    Activities: {activities[:300]}
     
     For each product, provide:
     - name: Specific product name (e.g., "Waterproof Hiking Boots" not just "shoes")
     - category: Product category (clothing/gadgets/accessories/health)
-    - reason: Why this product is needed for this specific trip
+    - reason: Why needed for this trip (max 50 words)
     - price_range: Estimated price in USD (e.g., "$50-80")
     - priority: must-have or nice-to-have
-    - search_term: Amazon search keywords for this product
+    - search_term: Amazon search keywords
     
     Return ONLY valid JSON array format, no other text:
     [
@@ -247,7 +216,6 @@ async def generate_product_recommendations(
         if start_idx != -1 and end_idx > start_idx:
             json_str = response[start_idx:end_idx]
             products = json.loads(json_str)
-
 
             
             # Add Amazon URLs to each product

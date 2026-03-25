@@ -101,7 +101,8 @@ flight_agent_groq = GroqAgent(
         "Include major airlines and budget carriers",
         "Provide detailed timing (departure, arrival, duration, layovers)",
         "Estimate realistic pricing based on route and season",
-        "Recommend at least 5 flight options",
+        "Recommend exactly 5-6 flight options with variety (e.g., budget, mid-range, and premium)",
+        "Include flight numbers, airline names, and booking URLs (use Google Flights or Kayak format)",
         "Include baggage allowances and booking tips",
         "Format with clear sections and pricing breakdown"
     ],
@@ -115,8 +116,10 @@ hotel_agent_groq = GroqAgent(
     instructions=[
         "Research and recommend hotels based on user preferences",
         "Consider budget, location, amenities, and travel style",
-        "Provide at least 5 detailed hotel recommendations",
-        "Include pricing estimates, ratings, and key amenities",
+         "Provide exactly 5-6 detailed hotel recommendations with variety (budget, mid-range, luxury)",
+        "Include pricing estimates, ratings (out of 5), and key amenities list",
+        "Include specific hotel names and addresses",
+        "Include booking URLs (use Booking.com or Hotels.com format)",
         "Consider location relative to attractions",
         "Include family-friendly features if applicable",
         "Provide booking tips and cancellation policies",
@@ -133,11 +136,13 @@ dining_agent_groq = GroqAgent(
     instructions=[
         "Research and recommend restaurants and food experiences",
         "Match recommendations to cuisine preferences and dietary restrictions",
-        "Provide at least 5 restaurant recommendations",
+        "Provide exactly 5-6 restaurant recommendations with variety (budget, mid-range, fine dining)",
+        "Include specific restaurant names and locations/addresses",
         "Include price ranges, popular dishes, and ambiance descriptions",
+        "Include website URLs or Google Maps URLs for each restaurant",
         "Consider meal timing and reservation requirements",
         "Highlight local specialties and must-try dishes",
-        "Include food markets and culinary experiences",
+        "Include food markets and culinary experiences where relevant",
         "Provide local food customs and etiquette tips",
         "Format with emojis and clear price indicators ($, $$, $$$)"
     ],

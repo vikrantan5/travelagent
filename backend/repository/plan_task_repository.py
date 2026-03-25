@@ -16,17 +16,21 @@ async def create_plan_task(
 ) -> PlanTask:
     """Create a new plan task."""
     async with get_db_session() as session:
-        task = PlanTask(
-            trip_plan_id=trip_plan_id,
-            task_type=task_type,
-            status=status,
-            input_data=input_data,
-        )
-        session.add(task)
-        await session.commit()
-        await session.refresh(task)
-        return task
-
+        try:
+            task = PlanTask(
+                trip_plan_id=trip_plan_id,
+                task_type=task_type,
+                status=status,
+                input_data=input_data,
+            )
+            session.add(task)
+            await session.flush()  # Flush before commit to catch errors early
+            await session.commit()
+            await session.refresh(task)
+            return task
+        except Exception as e:
+            await session.rollback()
+            raise
 
 async def update_task_status(
     task_id: int,
@@ -36,19 +40,24 @@ async def update_task_status(
 ) -> Optional[PlanTask]:
     """Update the status and output of a plan task."""
     async with get_db_session() as session:
-        result = await session.execute(select(PlanTask).where(PlanTask.id == task_id))
-        task = result.scalar_one_or_none()
+        try:
+            result = await session.execute(select(PlanTask).where(PlanTask.id == task_id))
+            task = result.scalar_one_or_none()
 
-        if task:
-            task.status = status
-            if output_data is not None:
-                task.output_data = output_data
-            if error_message is not None:
-                task.error_message = error_message
-            task.updated_at = datetime.now(timezone.utc)
-            await session.commit()
-            await session.refresh(task)
-        return task
+            if task:
+                task.status = status
+                if output_data is not None:
+                    task.output_data = output_data
+                if error_message is not None:
+                    task.error_message = error_message
+                task.updated_at = datetime.now(timezone.utc)
+                await session.flush()
+                await session.commit()
+                await session.refresh(task)
+            return task
+        except Exception as e:
+            await session.rollback()
+            raise
 
 
 async def get_task_by_id(task_id: int) -> Optional[PlanTask]:

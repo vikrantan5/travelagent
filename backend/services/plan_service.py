@@ -330,7 +330,13 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
 
             Provide a very detailed research about the flights, its price, duration, and other relevant information that user might be interested in.
 
-            Give top 5 flights.
+            ive exactly 5-6 flight options with variety (budget-friendly, standard, and premium if possible).
+            For each flight, include:
+            - Airline name and flight number
+            - Departure and arrival times
+            - Duration and number of stops
+            - Price estimate
+            - Booking URL (use format like https://www.google.com/flights or https://www.kayak.com/flights)
             """
         )
 
@@ -361,7 +367,14 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
 
             Provide a very detailed research about the hotels, its price, amenities, and other relevant information that user might be interested in.
 
-            Give top 5 hotels.
+             Give exactly 5-6 hotel options with variety (budget, mid-range, luxury).
+            For each hotel, include:
+            - Hotel name and full address
+            - Rating (out of 5 stars)
+            - Price range per night
+            - Key amenities (as a list)
+            - Description
+            - Booking URL (use format like https://www.booking.com or https://www.hotels.com)
             """
         )
 
@@ -392,7 +405,13 @@ async def generate_travel_plan(request: TravelPlanAgentRequest) -> str:
 
             Provide a very detailed research about the restaurants, its price, menu, and other relevant information that user might be interested in.
 
-            Give top 5 restaurants.
+            Give exactly 5-6 restaurant options with variety (budget-friendly, mid-range, fine dining).
+            For each restaurant, include:
+            - Restaurant name and location/address
+            - Cuisine type and price range ($, $$, $$$)
+            - Description and ambiance
+            - Popular dishes
+            - Website URL or Google Maps URL
             """
         )
 

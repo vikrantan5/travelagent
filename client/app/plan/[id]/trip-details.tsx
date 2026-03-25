@@ -1115,7 +1115,7 @@ export default function TripDetails() {
                   </div>
                 </section>
 
-                {/* Attractions Section */}
+ {/* Attractions Section */}
                 {trip.itinerary.attractions &&
                   trip.itinerary.attractions.length > 0 && (
                     <section>
@@ -1124,11 +1124,31 @@ export default function TripDetails() {
                         Attractions & Activities
                       </h2>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {trip.itinerary.attractions.map((attraction, index) => (
+                        {trip.itinerary.attractions.map((attraction, index) => {
+                          // Try to find a matching image for this attraction
+                          const matchingImage = trip.images?.find(img => 
+                            img.place.toLowerCase().includes(attraction.name.toLowerCase()) ||
+                            attraction.name.toLowerCase().includes(img.place.toLowerCase())
+                          );
+                          const imageUrl = matchingImage?.image_url || trip.images?.[index % (trip.images?.length || 1)]?.image_url;
+                          
+                          return (
                           <Card
                             key={index}
-                            className="group hover:shadow-md transition-all duration-300 border-b-4 border-b-transparent hover:border-b-primary"
+                            className="group hover:shadow-md transition-all duration-300 border-b-4 border-b-transparent hover:border-b-primary overflow-hidden"
                           >
+                            {imageUrl && (
+                              <div className="relative h-48 w-full overflow-hidden">
+                                <img 
+                                  src={imageUrl}
+                                  alt={attraction.name}
+                                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                  }}
+                                />
+                              </div>
+                            )}
                             <CardHeader>
                               <CardTitle className="text-lg group-hover:text-primary transition-colors">
                                 {attraction.name}
@@ -1142,7 +1162,8 @@ export default function TripDetails() {
                               </CardContent>
                             )}
                           </Card>
-                        ))}
+                        );
+                        })}
                       </div>
                     </section>
                   )}

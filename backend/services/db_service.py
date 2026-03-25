@@ -49,7 +49,7 @@ def get_db_pool() -> asyncpg.Pool:
 # -----------------------------
 # DB INITIALIZATION
 # -----------------------------
-async def initialize_db_pool(pool_size: int = 10, max_overflow: int = 20) -> None:
+async def initialize_db_pool(pool_size: int = 5, max_overflow: int = 10) -> None:
     global _engine, _session_factory, _db_pool
 
     if _engine is not None:
@@ -69,7 +69,7 @@ async def initialize_db_pool(pool_size: int = 10, max_overflow: int = 20) -> Non
         logger.info("Creating asyncpg connection pool")
         _db_pool = await asyncpg.create_pool(
             RAW_URL,
-            min_size=5,
+            min_size=2,
             max_size=pool_size,
             ssl=ssl_context,
             command_timeout=60,
@@ -94,10 +94,13 @@ async def initialize_db_pool(pool_size: int = 10, max_overflow: int = 20) -> Non
             future=True,
             pool_size=pool_size,
             max_overflow=max_overflow,
+            pool_pre_ping=True,  # Verify connections before using
+            pool_recycle=3600,    # Recycle connections after 1 hour
             connect_args={
                 "statement_cache_size": 0,
                 "prepared_statement_cache_size": 0,
-                "ssl": ssl_context
+                "ssl": ssl_context,
+                "timeout": 30
             }
         )
 
@@ -105,6 +108,7 @@ async def initialize_db_pool(pool_size: int = 10, max_overflow: int = 20) -> Non
             _engine,
             expire_on_commit=False,
             autoflush=False,
+            autocommit=False,
         )
 
         logger.info("🔥 Database connected successfully via Supabase Pooler!")
@@ -137,13 +141,16 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
     if _session_factory is None:
         await initialize_db_pool()
 
-    async with _session_factory() as session:
-        try:
-            yield session
-        except Exception as e:
-            await session.rollback()
-            logger.error(f"❌ Session error: {e}")
-            raise
+    session: AsyncSession = _session_factory()
+    try:
+        yield session
+      
+    except Exception as e:
+        await session.rollback()
+        logger.error(f"❌ Session error: {e}")
+        raise
+    finally:
+        await session.close()
 
 
 # -----------------------------

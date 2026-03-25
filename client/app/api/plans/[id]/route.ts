@@ -26,17 +26,17 @@ export async function GET(
         tp.*,
         tps.id as status_id,
         tps.status as status_status,
-        tps.current_step as status_current_step,
+        tps."currentStep" as status_current_step,
         tps.error as status_error,
-        tps.started_at as status_started_at,
-        tps.completed_at as status_completed_at,
+        tps."startedAt" as status_started_at,
+        tps."completedAt" as status_completed_at,
         tpo.id as output_id,
         tpo.itinerary as output_itinerary,
         tpo.summary as output_summary
       FROM trip_plan tp
-      LEFT JOIN trip_plan_status tps ON tp.id = tps.trip_plan_id
-      LEFT JOIN trip_plan_output tpo ON tp.id = tpo.trip_plan_id
-      WHERE tp.id = $1 AND tp.user_id = $2`,
+      LEFT JOIN trip_plan_status tps ON tp.id = tps."tripPlanId"
+      LEFT JOIN trip_plan_output tpo ON tp.id = tpo."tripPlanId"
+      WHERE tp.id = $1 AND tp."userId" = $2`,
       [id, session.user.id]
     );
 
@@ -55,30 +55,30 @@ export async function GET(
       id: tripPlan.id,
       name: tripPlan.name,
       destination: tripPlan.destination,
-      startingLocation: tripPlan.starting_location,
-      travelDatesStart: tripPlan.travel_dates_start,
-      travelDatesEnd: tripPlan.travel_dates_end,
-      dateInputType: tripPlan.date_input_type,
+      startingLocation: tripPlan.startingLocation,
+      travelDatesStart: tripPlan.travelDatesStart,
+      travelDatesEnd: tripPlan.travelDatesEnd,
+      dateInputType: tripPlan.dateInputType,
       duration: tripPlan.duration,
-      travelingWith: tripPlan.traveling_with,
+      travelingWith: tripPlan.travelingWith,
       adults: tripPlan.adults,
       children: tripPlan.children,
-      ageGroups: tripPlan.age_groups,
+      ageGroups: tripPlan.ageGroups,
       budget: tripPlan.budget,
-      budgetCurrency: tripPlan.budget_currency,
-      travelStyle: tripPlan.travel_style,
-      budgetFlexible: tripPlan.budget_flexible,
+      budgetCurrency: tripPlan.budgetCurrency,
+      travelStyle: tripPlan.travelStyle,
+      budgetFlexible: tripPlan.budgetFlexible,
       vibes: tripPlan.vibes,
       priorities: tripPlan.priorities,
       interests: tripPlan.interests,
       rooms: tripPlan.rooms,
       pace: tripPlan.pace,
-      beenThereBefore: tripPlan.been_there_before,
-      lovedPlaces: tripPlan.loved_places,
-      additionalInfo: tripPlan.additional_info,
-      createdAt: tripPlan.created_at,
-      updatedAt: tripPlan.updated_at,
-      userId: tripPlan.user_id,
+      beenThereBefore: tripPlan.beenThereBefore,
+      lovedPlaces: tripPlan.lovedPlaces,
+      additionalInfo: tripPlan.additionalInfo,
+      createdAt: tripPlan.createdAt,
+      updatedAt: tripPlan.updatedAt,
+      userId: tripPlan.userId,
       status: tripPlan.status_id ? {
         id: tripPlan.status_id,
         status: tripPlan.status_status,
@@ -93,7 +93,6 @@ export async function GET(
         summary: tripPlan.output_summary
       } : null
     };
-
     return NextResponse.json(
       {
         success: true,
@@ -133,7 +132,7 @@ export async function DELETE(
 
     // First check if the plan exists and belongs to the user
     const tripPlan = await queryOne<any>(
-      'SELECT id FROM trip_plan WHERE id = $1 AND user_id = $2',
+        'SELECT id FROM trip_plan WHERE id = $1 AND "userId" = $2',
       [id, session.user.id]
     );
 
@@ -149,11 +148,11 @@ export async function DELETE(
 
     // Delete related records first (status and output) - CASCADE should handle this
     // But we'll do it explicitly for safety
-    await query('DELETE FROM trip_plan_status WHERE trip_plan_id = $1', [id]);
-    await query('DELETE FROM trip_plan_output WHERE trip_plan_id = $1', [id]);
+    await query('DELETE FROM trip_plan_status WHERE "tripPlanId" = $1', [id]);
+    await query('DELETE FROM trip_plan_output WHERE "tripPlanId" = $1', [id]);
 
     // Delete the trip plan
-    await query('DELETE FROM trip_plan WHERE id = $1 AND user_id = $2', [id, session.user.id]);
+    await query('DELETE FROM trip_plan WHERE id = $1 AND "userId" = $2', [id, session.user.id]);
 
     return NextResponse.json(
       {

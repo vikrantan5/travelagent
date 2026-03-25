@@ -20,9 +20,9 @@ export async function POST(
       );
     }
 
-    // First check if the plan exists and belongs to the user
+  // First check if the plan exists and belongs to the user
     const tripPlan = await queryOne<any>(
-      `SELECT * FROM trip_plan WHERE id = $1 AND user_id = $2`,
+      `SELECT * FROM trip_plan WHERE id = $1 AND "userId" = $2`,
       [id, session.user.id]
     );
 
@@ -38,10 +38,10 @@ export async function POST(
 
     // Update the status to pending/processing
     await query(
-      `INSERT INTO trip_plan_status (trip_plan_id, status, current_step, created_at, updated_at)
+      `INSERT INTO trip_plan_status ("tripPlanId", status, "currentStep", "createdAt", "updatedAt")
        VALUES ($1, $2, $3, NOW(), NOW())
-       ON CONFLICT (trip_plan_id) 
-       DO UPDATE SET status = $2, current_step = $3, updated_at = NOW()`,
+       ON CONFLICT ("tripPlanId") 
+       DO UPDATE SET status = $2, "currentStep" = $3, "updatedAt" = NOW()`,
       [id, 'processing', 'Restarting trip plan generation...']
     );
 
@@ -51,29 +51,29 @@ export async function POST(
       travel_plan: {
         name: tripPlan.name,
         destination: tripPlan.destination,
-        starting_location: tripPlan.starting_location,
+        starting_location: tripPlan.startingLocation,
         travel_dates: {
-          start: tripPlan.travel_dates_start,
-          end: tripPlan.travel_dates_end || ""
+          start: tripPlan.travelDatesStart,
+          end: tripPlan.travelDatesEnd || ""
         },
-        date_input_type: tripPlan.date_input_type,
+        date_input_type: tripPlan.dateInputType,
         duration: tripPlan.duration,
-        traveling_with: tripPlan.traveling_with,
+        traveling_with: tripPlan.travelingWith,
         adults: tripPlan.adults,
         children: tripPlan.children,
-        age_groups: tripPlan.age_groups,
+        age_groups: tripPlan.ageGroups,
         budget: tripPlan.budget,
-        budget_currency: tripPlan.budget_currency,
-        travel_style: tripPlan.travel_style,
-        budget_flexible: tripPlan.budget_flexible,
+        budget_currency: tripPlan.budgetCurrency,
+        travel_style: tripPlan.travelStyle,
+        budget_flexible: tripPlan.budgetFlexible,
         vibes: tripPlan.vibes,
         priorities: tripPlan.priorities,
         interests: tripPlan.interests || "",
         rooms: tripPlan.rooms,
         pace: tripPlan.pace,
-        been_there_before: tripPlan.been_there_before || "",
-        loved_places: tripPlan.loved_places || "",
-        additional_info: tripPlan.additional_info || ""
+        been_there_before: tripPlan.beenThereBefore || "",
+        loved_places: tripPlan.lovedPlaces || "",
+        additional_info: tripPlan.additionalInfo || ""
       }
     };
 
@@ -90,8 +90,8 @@ export async function POST(
       // If backend call fails, update status back to failed
       await query(
         `UPDATE trip_plan_status 
-         SET status = $1, current_step = $2, updated_at = NOW()
-         WHERE trip_plan_id = $3`,
+         SET status = $1, "currentStep" = $2, "updatedAt" = NOW()
+         WHERE "tripPlanId" = $3`,
         ['failed', 'Failed to restart trip plan generation', id]
       );
 
@@ -123,8 +123,8 @@ export async function POST(
     try {
       await query(
         `UPDATE trip_plan_status 
-         SET status = $1, current_step = $2, updated_at = NOW()
-         WHERE trip_plan_id = $3`,
+         SET status = $1, "currentStep" = $2, "updatedAt" = NOW()
+         WHERE "tripPlanId" = $3`,
         ['failed', 'Error occurred while retrying', id]
       );
     } catch (statusError) {

@@ -291,12 +291,12 @@ export default function PlanForm() {
 
     try {
       // Check payment status first
-      if (session?.user?.id) {
+      if (user?.id) {
         try {
           const paymentCheck = await fetch("/api/payment/check", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_id: session.user.id }),
+            body: JSON.stringify({ user_id: user.id }),
           });
           
           const paymentStatus = await paymentCheck.json();
@@ -313,10 +313,10 @@ export default function PlanForm() {
         }
       }
 
-      // Include user ID from session if available
+      // Include user ID from auth context if available
       const submitData = {
         ...data,
-        userId: session?.user?.id || null, // Include user ID from Better Auth session
+        userId: user?.id || null, // Include user ID from JWT auth
       };
 
       const response = await fetch("/api/plan/submit", {
@@ -331,12 +331,12 @@ export default function PlanForm() {
 
       if (result.success) {
         // Record planner creation
-        if (session?.user?.id) {
+        if (user?.id) {
           try {
              await fetch("/api/payment/record-planner", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ user_id: session.user.id }),
+              body: JSON.stringify({ user_id: user.id }),
             });
           } catch (recordError) {
             console.error("Failed to record planner:", recordError);
@@ -601,7 +601,7 @@ export default function PlanForm() {
                           <FormLabel className="text-base font-semibold flex items-center gap-2">
                             <Sparkles className="w-4 h-4 text-primary" />
                             What&apos;s your name?
-                            {session?.user?.name && (
+                             {user?.name && (
                               <Badge variant="secondary" className="text-xs">
                                 Prefilled from account
                               </Badge>
@@ -614,11 +614,11 @@ export default function PlanForm() {
                               className="h-12 text-base"
                             />
                           </FormControl>
-                          <FormDescription>
-                            {session?.user?.name ? (
+                                                 <FormDescription>
+                            {user?.name ? (
                               <span className="text-green-600 flex items-center gap-1">
                                 <Sparkles className="w-3 h-3" />
-                                Welcome back, {session.user.name}! Your name has
+                                Welcome back, {user.name}! Your name has
                                 been prefilled.
                               </span>
                             ) : (
@@ -1595,11 +1595,11 @@ export default function PlanForm() {
         </Form>
       </div>
         {/* Payment Modal */}
-      {showPaymentModal && session?.user?.id && (
+          {showPaymentModal && user?.id && (
         <PaymentModal
           isOpen={showPaymentModal}
           onClose={() => setShowPaymentModal(false)}
-          userId={session.user.id}
+          userId={user.id}
         />
       )}
     </div>

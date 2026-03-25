@@ -64,11 +64,11 @@ export async function POST(request: NextRequest) {
     // Save to database using raw SQL
     const savedTripPlan = await queryOne<any>(
       `INSERT INTO trip_plan (
-        id, name, destination, starting_location, travel_dates_start, travel_dates_end,
-        date_input_type, duration, traveling_with, adults, children, age_groups,
-        budget, budget_currency, travel_style, budget_flexible, vibes, priorities,
-        interests, rooms, pace, been_there_before, loved_places, additional_info,
-        user_id, created_at, updated_at
+          id, name, destination, "startingLocation", "travelDatesStart", "travelDatesEnd",
+        "dateInputType", duration, "travelingWith", adults, children, "ageGroups",
+        budget, "budgetCurrency", "travelStyle", "budgetFlexible", vibes, priorities,
+        interests, rooms, pace, "beenThereBefore", "lovedPlaces", "additionalInfo",
+        "userId", "createdAt", "updatedAt"
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18,
         $19, $20, $21, $22, $23, $24, $25, NOW(), NOW()

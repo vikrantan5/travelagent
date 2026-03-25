@@ -30,7 +30,7 @@ export default function Header() {
         <div className="flex justify-between items-center py-4 md:py-6">
           <div className="flex items-center gap-8">
             <Link href="/" className="hover:opacity-80 transition-opacity">
-              <h1 className="text-2xl font-bold text-accent">TripCraft AI</h1>
+              <h1 className="text-2xl font-bold text-accent">Travelethic</h1>
             </Link>
           </div>
 

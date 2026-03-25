@@ -15,20 +15,19 @@ export async function GET(request: NextRequest) {
         { status: 401 }
       );
     }
-
     const tripPlans = await query<any>(
       `SELECT DISTINCT ON (id) 
-        id, name, destination, starting_location as "startingLocation",
-        travel_dates_start as "travelDatesStart", travel_dates_end as "travelDatesEnd",
-        date_input_type as "dateInputType", duration, traveling_with as "travelingWith",
-        adults, children, age_groups as "ageGroups", budget, budget_currency as "budgetCurrency",
-        travel_style as "travelStyle", budget_flexible as "budgetFlexible",
-        vibes, priorities, interests, rooms, pace, been_there_before as "beenThereBefore",
-        loved_places as "lovedPlaces", additional_info as "additionalInfo",
-        created_at as "createdAt", updated_at as "updatedAt", user_id as "userId"
+        id, name, destination, "startingLocation",
+        "travelDatesStart", "travelDatesEnd",
+        "dateInputType", duration, "travelingWith",
+        adults, children, "ageGroups", budget, "budgetCurrency",
+        "travelStyle", "budgetFlexible",
+        vibes, priorities, interests, rooms, pace, "beenThereBefore",
+        "lovedPlaces", "additionalInfo",
+        "createdAt", "updatedAt", "userId"
       FROM trip_plan
-      WHERE user_id = $1
-      ORDER BY id, created_at DESC`,
+      WHERE "userId" = $1
+      ORDER BY id, "createdAt" DESC`,
       [session.user.id]
     );
 

@@ -38,10 +38,10 @@ export async function POST(
 
     // Update the status to pending/processing
     await query(
-      `INSERT INTO trip_plan_status ("tripPlanId", status, "currentStep", "createdAt", "updatedAt")
-       VALUES ($1, $2, $3, NOW(), NOW())
+      `INSERT INTO trip_plan_status (id, "tripPlanId", status, "currentStep", "createdAt", "updatedAt")
+       VALUES (gen_random_uuid(), $1, $2, $3, NOW(), NOW())
        ON CONFLICT ("tripPlanId") 
-       DO UPDATE SET status = $2, "currentStep" = $3, "updatedAt" = NOW()`,
+       DO UPDATE SET status = EXCLUDED.status, "currentStep" = EXCLUDED."currentStep", "updatedAt" = NOW()`,
       [id, 'processing', 'Restarting trip plan generation...']
     );
 

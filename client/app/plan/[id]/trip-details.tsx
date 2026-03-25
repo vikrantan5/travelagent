@@ -76,6 +76,8 @@ interface DayPlan {
   evening: string;
   notes?: string;
   
+  image_url?: string;
+  
 }
 
 interface Hotel {
@@ -389,15 +391,18 @@ export default function TripDetails() {
 
              // Extract images and products with safe defaults
             place_images = Array.isArray(parsedOutput.images) ? parsedOutput.images : [];
+            console.log("📸 Extracted place_images:", place_images);
             products = Array.isArray(parsedOutput.product_recommendations) 
               ? parsedOutput.product_recommendations 
               : Array.isArray(parsedOutput.products) 
                 ? parsedOutput.products 
                 : [];
+            console.log("🛍️ Extracted products:", products);
             if (parsedOutput.itinerary) {
               // Then parse the inner JSON string to get the actual itinerary
               itinerary = JSON.parse(parsedOutput.itinerary) as Itinerary;
               console.log("Parsed itinerary:", itinerary);
+              console.log("📅 Daily plan from itinerary:", itinerary.day_by_day_plan);
             }
           } catch (e) {
             console.error("Failed to parse itinerary JSON:", e);
@@ -455,6 +460,8 @@ export default function TripDetails() {
         };
 
         console.log("Setting trip state:", tripDetails);
+        console.log("🖼️ Trip images array:", tripDetails.images);
+        console.log("📋 Trip itinerary daily plan:", tripDetails.itinerary?.day_by_day_plan);
         setTrip(tripDetails);
       } else {
         setError("Trip plan not found");
@@ -1040,6 +1047,25 @@ export default function TripDetails() {
                         key={dayPlan.day}
                         className="overflow-hidden border-l-4 border-l-primary"
                       >
+                         {dayPlan.image_url && (
+                          <div className="relative h-64 w-full overflow-hidden">
+                            <img 
+                              src={dayPlan.image_url}
+                              alt={`Day ${dayPlan.day}`}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                console.error(`Failed to load image for Day ${dayPlan.day}:`, dayPlan.image_url);
+                                e.currentTarget.style.display = 'none';
+                              }}
+                              onLoad={() => {
+                                console.log(`✅ Successfully loaded image for Day ${dayPlan.day}`);
+                              }}
+                            />
+                            <div className="absolute top-4 left-4 bg-black/60 text-white px-3 py-1 rounded-full text-sm font-medium">
+                              Day {dayPlan.day}
+                            </div>
+                          </div>
+                        )}
                         <CardHeader className="bg-muted/50 pb-3">
                           <div className="flex items-center justify-between">
                             <CardTitle className="text-xl flex items-center">
@@ -1131,6 +1157,12 @@ export default function TripDetails() {
                             attraction.name.toLowerCase().includes(img.place.toLowerCase())
                           );
                           const imageUrl = matchingImage?.image_url || trip.images?.[index % (trip.images?.length || 1)]?.image_url;
+
+                          
+                          console.log(`🏛️ Attraction ${index}: ${attraction.name}`);
+                          console.log(`   Matching image:`, matchingImage);
+                          console.log(`   Final imageUrl:`, imageUrl);
+                          console.log(`   Available images:`, trip.images);
                           
                           return (
                           <Card
@@ -1144,7 +1176,11 @@ export default function TripDetails() {
                                   alt={attraction.name}
                                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                                   onError={(e) => {
+                                    console.error(`❌ Failed to load image for ${attraction.name}:`, imageUrl);
                                     e.currentTarget.style.display = 'none';
+                                  }}
+                                  onLoad={() => {
+                                    console.log(`✅ Successfully loaded image for ${attraction.name}`);
                                   }}
                                 />
                               </div>

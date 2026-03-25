@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import TripDetails from "./trip-details";
 
 export const metadata: Metadata = {
-  title: "Your Trip Plan | TripCraft AI",
+  title: "Your Trip Plan | Travelethic ",
   description: "View your AI-crafted travel itinerary with flights, hotels, and daily plans.",
 };
 

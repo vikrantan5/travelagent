@@ -6,7 +6,7 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="border-t border-border pt-8 space-y-4">
           <p className="text-center text-muted-foreground text-sm">
-            © 2024 TripCraft AI. All rights reserved.
+            © 2024 Travelethic . All rights reserved.
           </p>
           {/* <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
             Made with <Heart className="w-4 h-4 text-red-500 fill-current" /> by{" "}

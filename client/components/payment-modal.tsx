@@ -83,7 +83,7 @@ export function PaymentModal({ isOpen, onClose, userId }: PaymentModalProps) {
         key: data.razorpay_key_id,
         amount: data.amount,
         currency: data.currency,
-        name: "TripCraft AI",
+        name: "Travelethic",
         description: `${planType.charAt(0).toUpperCase() + planType.slice(1)} Plan`,
         order_id: data.order_id,
         handler: async function (response: any) {

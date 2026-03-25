@@ -3,19 +3,19 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { authClient } from "@/lib/auth-client";
+import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Luggage, Menu, X } from "lucide-react";
+import { Luggage, Menu, X, User } from "lucide-react";
 
 export default function Header() {
   const router = useRouter();
-  const { data: session, isPending } = authClient.useSession();
+  const { user, loading, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   async function handleLogout() {
     try {
-      await authClient.signOut();
+      await logout();
       toast.success("Logged out successfully");
       router.push("/");
     } catch (error) {
@@ -36,13 +36,13 @@ export default function Header() {
 
           {/* Desktop Menu */}
           <nav className="hidden md:flex items-center gap-6">
-             <Link
+            <Link
               href="/compare"
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               Compare Destinations
             </Link>
-            {session?.user && (
+            {user && (
               <Link
                 href="/plans"
                 className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
@@ -54,15 +54,20 @@ export default function Header() {
           </nav>
 
           <div className="hidden md:flex items-center gap-4">
-            {isPending ? (
+            {loading ? (
               <div className="w-24 h-8 bg-muted/50 animate-pulse rounded-md" />
-            ) : session?.user ? (
+            ) : user ? (
               <div className="flex items-center gap-4">
-                <div className="text-sm hidden lg:block">
-                  <span className="text-muted-foreground">Welcome, </span>
-                  <span className="font-medium">
-                    {session.user.name || session.user.email}
-                  </span>
+                <div className="flex items-center gap-2">
+                  <div className="text-sm hidden lg:block">
+                    <span className="text-muted-foreground">Welcome, </span>
+                    <span className="font-medium">{user.name}</span>
+                  </div>
+                  {user.is_premium && (
+                    <span className="text-xs bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-2 py-1 rounded-full font-semibold">
+                      Premium
+                    </span>
+                  )}
                 </div>
                 <Button variant="outline" size="sm" onClick={handleLogout}>
                   Logout
@@ -85,79 +90,75 @@ export default function Header() {
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="md:hidden flex items-center">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-            >
-              {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </Button>
-          </div>
+          <button
+            className="md:hidden p-2 text-muted-foreground hover:text-foreground transition-colors"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            aria-label="Toggle menu"
+          >
+            {isMenuOpen ? (
+              <X className="w-6 h-6" />
+            ) : (
+              <Menu className="w-6 h-6" />
+            )}
+          </button>
         </div>
-      </div>
 
-      {/* Mobile Menu */}
-      {isMenuOpen && (
-        <div className="md:hidden bg-card border-t border-border">
-          <div className="px-4 pt-2 pb-4 space-y-4">
-            <nav className="flex flex-col gap-4">
-               <Link
+        {/* Mobile Menu */}
+        {isMenuOpen && (
+          <div className="md:hidden border-t border-border py-4 space-y-4">
+            <nav className="space-y-3">
+              <Link
                 href="/compare"
-                className="text-base font-medium text-muted-foreground hover:text-foreground transition-colors"
+                className="block text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Compare Destinations
               </Link>
-              {session?.user && (
+              {user && (
                 <Link
                   href="/plans"
-                  className="flex items-center gap-2 text-base font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  <Luggage className="w-5 h-5" />
+                  <Luggage className="w-4 h-4" />
                   My Plans
                 </Link>
               )}
             </nav>
-            <div className="border-t border-border pt-4">
-              {isPending ? (
-                <div className="w-full h-10 bg-muted/50 animate-pulse rounded-md" />
-              ) : session?.user ? (
-                <div className="flex flex-col items-start gap-4">
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">Welcome, </span>
-                    <span className="font-medium">
-                      {session.user.name || session.user.email}
-                    </span>
+
+            <div className="pt-3 border-t border-border space-y-3">
+              {user ? (
+                <>
+                  <div className="flex items-center gap-2 text-sm">
+                    <User className="w-4 h-4 text-muted-foreground" />
+                    <span className="font-medium">{user.name}</span>
+                    {user.is_premium && (
+                      <span className="text-xs bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-2 py-1 rounded-full font-semibold">
+                        Premium
+                      </span>
+                    )}
                   </div>
                   <Button
                     variant="outline"
-                    className="w-full"
+                    size="sm"
                     onClick={() => {
                       handleLogout();
                       setIsMenuOpen(false);
                     }}
+                    className="w-full"
                   >
                     Logout
                   </Button>
-                </div>
+                </>
               ) : (
-                <div className="flex flex-col gap-3">
-                  <Link href="/auth" className="w-full">
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
+                <div className="space-y-2">
+                  <Link href="/auth" onClick={() => setIsMenuOpen(false)}>
+                    <Button variant="outline" size="sm" className="w-full">
                       Sign In
                     </Button>
                   </Link>
-                  <Link href="/plan" className="w-full">
-                    <Button
-                      className="bg-primary hover:bg-primary/90 w-full"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
+                  <Link href="/plan" onClick={() => setIsMenuOpen(false)}>
+                    <Button size="sm" className="w-full bg-primary hover:bg-primary/90">
                       Get Started
                     </Button>
                   </Link>
@@ -165,8 +166,8 @@ export default function Header() {
               )}
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </header>
   );
 }

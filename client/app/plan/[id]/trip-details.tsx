@@ -1033,7 +1033,8 @@ export default function TripDetails() {
                     Itinerary
                   </h2>
                   <div className="grid grid-cols-1 gap-6">
-                    {trip.itinerary.day_by_day_plan.map((dayPlan) => (
+ {trip.itinerary?.day_by_day_plan && trip.itinerary.day_by_day_plan.length > 0 ? (
+                      trip.itinerary.day_by_day_plan.map((dayPlan) => (
                       <Card
                         key={dayPlan.day}
                         className="overflow-hidden border-l-4 border-l-primary"
@@ -1102,7 +1103,14 @@ export default function TripDetails() {
                           </div>
                         )}
                       </Card>
-                    ))}
+                     ))
+                    ) : (
+                      <Card>
+                        <CardContent className="pt-6">
+                          <p className="text-muted-foreground text-center">No daily itinerary available yet.</p>
+                        </CardContent>
+                      </Card>
+                    )}
                   </div>
                 </section>
 

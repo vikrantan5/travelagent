@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { authClient } from "@/lib/auth-client";
-import { umami } from "@/lib/umami";
+import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -15,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { Label } from "@/components/ui/label";
 
 export default function AuthForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -24,6 +24,7 @@ export default function AuthForm() {
     password: "",
   });
   const router = useRouter();
+  const { login, register } = useAuth();
 
   function handleInputChange(field: string, value: string) {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -34,22 +35,11 @@ export default function AuthForm() {
     setIsLoading(true);
 
     try {
-      const result = await authClient.signIn.email({
-        email: formData.email,
-        password: formData.password,
-      });
-
-      if (result.error) {
-        toast.error(result.error.message || "Failed to sign in");
-        umami.track("Sign In Failure", { error: result.error.message });
-        return;
-      }
-
-      umami.track("Sign In Success");
+      await login(formData.email, formData.password);
       toast.success("Welcome back! Redirecting to your dashboard...");
       router.push("/plan");
-    } catch (error) {
-      toast.error("An unexpected error occurred");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to sign in");
       console.error("Sign in failed:", error);
     } finally {
       setIsLoading(false);
@@ -58,26 +48,31 @@ export default function AuthForm() {
 
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
+    setIsLoading(false);
+
+    if (!formData.name.trim()) {
+      toast.error("Please enter your name");
+      return;
+    }
+
+    if (!formData.email.trim()) {
+      toast.error("Please enter your email");
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const result = await authClient.signUp.email({
-        email: formData.email,
-        password: formData.password,
-        name: formData.name,
-      });
-
-      if (result.error) {
-        toast.error(result.error.message || "Failed to create account");
-        umami.track("Sign Up Failure", { error: result.error.message });
-        return;
-      }
-
-      umami.track("Sign Up Success");
+      await register(formData.email, formData.password, formData.name);
       toast.success("Account created successfully! Redirecting...");
       router.push("/plan");
-    } catch (error) {
-      toast.error("An unexpected error occurred");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to create account");
       console.error("Sign up failed:", error);
     } finally {
       setIsLoading(false);
@@ -89,7 +84,7 @@ export default function AuthForm() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">
-            Welcome
+            Welcome to TripCraft AI
           </CardTitle>
           <CardDescription className="text-center">
             Sign in to your account or create a new one
@@ -102,101 +97,89 @@ export default function AuthForm() {
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="signin" className="space-y-4">
+            <TabsContent value="signin">
               <form onSubmit={handleSignIn} className="space-y-4">
                 <div className="space-y-2">
-                  <label
-                    htmlFor="email"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    Email
-                  </label>
+                  <Label htmlFor="signin-email">Email</Label>
                   <Input
-                    id="email"
+                    id="signin-email"
                     type="email"
-                    placeholder="Enter your email"
+                    placeholder="you@example.com"
                     value={formData.email}
                     onChange={(e) => handleInputChange("email", e.target.value)}
                     required
+                    disabled={isLoading}
                   />
                 </div>
                 <div className="space-y-2">
-                  <label
-                    htmlFor="password"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    Password
-                  </label>
+                  <Label htmlFor="signin-password">Password</Label>
                   <Input
-                    id="password"
+                    id="signin-password"
                     type="password"
-                    placeholder="Enter your password"
+                    placeholder="••••••••"
                     value={formData.password}
-                    onChange={(e) =>
-                      handleInputChange("password", e.target.value)
-                    }
+                    onChange={(e) => handleInputChange("password", e.target.value)}
                     required
+                    disabled={isLoading}
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={isLoading}
+                >
                   {isLoading ? "Signing in..." : "Sign In"}
                 </Button>
               </form>
             </TabsContent>
 
-            <TabsContent value="signup" className="space-y-4">
+            <TabsContent value="signup">
               <form onSubmit={handleSignUp} className="space-y-4">
                 <div className="space-y-2">
-                  <label
-                    htmlFor="name"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    Name
-                  </label>
+                  <Label htmlFor="signup-name">Name</Label>
                   <Input
-                    id="name"
+                    id="signup-name"
                     type="text"
-                    placeholder="Enter your name"
+                    placeholder="John Doe"
                     value={formData.name}
                     onChange={(e) => handleInputChange("name", e.target.value)}
                     required
+                    disabled={isLoading}
                   />
                 </div>
                 <div className="space-y-2">
-                  <label
-                    htmlFor="signup-email"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    Email
-                  </label>
+                  <Label htmlFor="signup-email">Email</Label>
                   <Input
                     id="signup-email"
                     type="email"
-                    placeholder="Enter your email"
+                    placeholder="you@example.com"
                     value={formData.email}
                     onChange={(e) => handleInputChange("email", e.target.value)}
                     required
+                    disabled={isLoading}
                   />
                 </div>
                 <div className="space-y-2">
-                  <label
-                    htmlFor="signup-password"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    Password
-                  </label>
+                  <Label htmlFor="signup-password">Password</Label>
                   <Input
                     id="signup-password"
                     type="password"
-                    placeholder="Create a password"
+                    placeholder="••••••••"
                     value={formData.password}
-                    onChange={(e) =>
-                      handleInputChange("password", e.target.value)
-                    }
+                    onChange={(e) => handleInputChange("password", e.target.value)}
                     required
+                    disabled={isLoading}
+                    minLength={6}
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Password must be at least 6 characters
+                  </p>
                 </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={isLoading}
+                >
                   {isLoading ? "Creating account..." : "Sign Up"}
                 </Button>
               </form>

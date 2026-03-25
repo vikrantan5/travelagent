@@ -9,6 +9,7 @@ from router.additional_routes import router as additional_router
 from router.products import router as products_router
 from router.comparison import router as comparison_router
 from router.payment import router as payment_router
+from router.auth import router as auth_router
 router = APIRouter(prefix="/api")
 
 
@@ -55,6 +56,7 @@ app.add_middleware(
 
 
 app.include_router(router)
+app.include_router(auth_router)
 app.include_router(plan_router)
 app.include_router(additional_router)
 app.include_router(products_router)

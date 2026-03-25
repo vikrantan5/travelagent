@@ -129,7 +129,7 @@ export default function Home() {
             variants={itemVariants}
             className="text-5xl font-bold sm:text-6xl md:text-7xl mb-4"
           >
-            <span className="gradient-text">TripCraft AI</span>
+            <span className="gradient-text">Travelethic</span>
           </motion.h1>
 
           <motion.h2
@@ -266,7 +266,7 @@ export default function Home() {
             variants={itemVariants}
             className="text-4xl font-bold text-center mb-16 gradient-text"
           >
-            Why Choose TripCraft AI
+            Why Choose Travelethic 
           </motion.h3>
           <motion.div
             className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3"

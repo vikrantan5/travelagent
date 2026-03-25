@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Plan My Trip - TripCraft AI",
+  title: "Plan My Trip -Travelethic ",
   description: "Your Journey, Perfectly Crafted with Intelligence",
 };
 

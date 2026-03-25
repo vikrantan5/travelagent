@@ -8,8 +8,7 @@ from services.auth_service import (
 )
 from middleware.auth_middleware import get_current_user
 
-
-router = APIRouter(prefix="/api/auth", tags=["Authentication"])
+router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
